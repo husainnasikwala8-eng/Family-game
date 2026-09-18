@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Test</title>
+<style>
+  html,body{margin:0;padding:0;overflow:hidden;background:#1a1a1a;height:100%;}
+  #status{
+    position:fixed; top:0; left:0; right:0; z-index:10;
+    background:rgba(0,0,0,0.75); color:#7CFC98;
+    font-family:monospace; font-size:13px; padding:10px 12px;
+    white-space:pre-wrap; word-break:break-word;
+  }
+  #status.error{ color:#FF6B6B; }
+  canvas{ display:block; }
+</style>
+</head>
+<body>
+<div id="status">Starting…</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+  const statusEl = document.getElementById('status');
+  function setStatus(msg, isError){
+    statusEl.textContent = msg;
+    statusEl.classList.toggle('error', !!isError);
+  }
+  window.addEventListener('error', (e) => {
+    setStatus('Script error: ' + e.message, true);
+  });
+
+  try {
+    const THREE = await import('three');
+    const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+    const { OrbitControls } = await import('three/addons/controls/OrbitControls.js');
+
+    setStatus('Three.js loaded. Setting up scene…');
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x2b2420);
+
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 100);
+    camera.position.set(2, 2, 4);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 2);
+    scene.add(hemi);
+    const dir = new THREE.DirectionalLight(0xffffff, 2);
+    dir.position.set(3,5,3);
+    scene.add(dir);
+
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(10,10),
+      new THREE.MeshStandardMaterial({ color: 0x5C7A5C })
+    );
+    ground.rotation.x = -Math.PI/2;
+    scene.add(ground);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0,1,0);
+    controls.enableDamping = true;
+
+    let mixer;
+    const clock = new THREE.Clock();
+
+    setStatus('Loading 3D character…');
+    const loader = new GLTFLoader();
+    loader.load(
+      'https://threejs.org/examples/models/gltf/Soldier.glb',
+      (gltf) => {
+        const model = gltf.scene;
+        scene.add(model);
+        mixer = new THREE.AnimationMixer(model);
+        const walkClip = gltf.animations.find(a => /walk/i.test(a.name)) || gltf.animations[0];
+        if(walkClip) mixer.clipAction(walkClip).play();
+        setStatus('Model loaded ✓ — drag to look around');
+      },
+      undefined,
+      (err) => {
+        setStatus('Model failed to load: ' + (err.message || err), true);
+      }
+    );
+
+    function animate(){
+      requestAnimationFrame(animate);
+      const dt = clock.getDelta();
+      if(mixer) mixer.update(dt);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth/window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+  } catch (err) {
+    setStatus('Setup failed: ' + err.message, true);
+  }
+</script>
+</body>
+</html>
