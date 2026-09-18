@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Family Quest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Firebase (compat build — plain <script> tags, no bundler needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+
+<style>
+  :root{
+    --sand:#F2E9D8; --card:#FFFDF8; --terracotta:#B4623F; --terracotta-deep:#8C4A30;
+    --sage:#5C7A5C; --ink:#2B2420; --gold:#C9A05C;
+    font-family:'Inter',system-ui,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){ --sand:#1E1A16; --card:#2A241E; --ink:#F2E9D8; }
+  }
+  :root[data-theme="dark"]{ --sand:#1E1A16; --card:#2A241E; --ink:#F2E9D8; }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; min-height:100vh; background:var(--sand); color:var(--ink);
+    display:flex; flex-direction:column; align-items:center;
+    padding:28px 18px 60px;
+  }
+  h1{
+    font-family:'Fraunces',serif; font-weight:700; font-size:32px; margin:0 0 4px;
+  }
+  .sub{ opacity:0.65; font-size:14px; margin:0 0 28px; text-align:center; }
+  .card{
+    background:var(--card); border:1px solid rgba(180,98,63,0.14);
+    border-radius:20px; padding:24px 20px; width:100%; max-width:380px;
+    box-shadow:0 2px 0 rgba(140,74,48,0.06);
+  }
+  .btn{
+    display:block; width:100%; padding:14px; border-radius:12px; border:none;
+    font-family:'Inter',sans-serif; font-weight:600; font-size:16px; cursor:pointer;
+    margin-top:10px;
+  }
+  .btn-primary{ background:var(--terracotta); color:#fff; }
+  .btn-secondary{ background:transparent; color:var(--terracotta-deep); border:1.5px solid var(--terracotta); }
+  input[type=text]{
+    width:100%; padding:13px 14px; border-radius:10px; border:1.5px solid rgba(180,98,63,0.25);
+    font-size:16px; font-family:'Inter',sans-serif; margin-top:6px; background:var(--sand);
+    color:var(--ink);
+  }
+  label{ font-size:13px; font-weight:600; opacity:0.75; }
+  .field{ margin-bottom:14px; }
+  .hidden{ display:none; }
+  .room-code{
+    font-family:'Fraunces',serif; font-weight:700; font-size:44px;
+    text-align:center; letter-spacing:0.08em; color:var(--terracotta-deep);
+    margin:6px 0 2px;
+  }
+  .room-label{ text-align:center; font-size:12px; opacity:0.6; margin-bottom:20px; }
+  .players{ list-style:none; padding:0; margin:0; }
+  .players li{
+    display:flex; align-items:center; gap:10px;
+    background:var(--sand); border-radius:12px; padding:10px 14px; margin-bottom:8px;
+    font-weight:600; font-size:15px;
+  }
+  .dot{ width:8px; height:8px; border-radius:50%; background:var(--sage); flex-shrink:0; }
+  .status{ font-size:13px; text-align:center; opacity:0.6; margin-top:14px; }
+  .error{ color:var(--terracotta-deep); font-size:13px; margin-top:8px; text-align:center; }
+  .back{ background:none; border:none; color:var(--terracotta-deep); font-size:13px; font-weight:600; margin-bottom:14px; cursor:pointer; padding:0; }
+</style>
+</head>
+  <body>
+
+  <h1>Family Quest</h1>
+  <p class="sub">Step 2 build: room lobby test — Firebase connection + live player list.</p>
+
+  <!-- SCREEN 1: choose host or join -->
+  <div id="screen-start" class="card">
+    <button class="btn btn-primary" onclick="showHost()">Host a Room</button>
+    <button class="btn btn-secondary" onclick="showJoin()">Join a Room</button>
+    <p class="status" id="connection-status">Connecting…</p>
+  </div>
+
+  <!-- SCREEN 2: host — pick a name, creates room -->
+  <div id="screen-host" class="card hidden">
+    <button class="back" onclick="goToStart()">&larr; back</button>
+    <div class="field">
+      <label>Your name</label>
+      <input type="text" id="host-name" placeholder="e.g. Husain" maxlength="20">
+    </div>
+    <button class="btn btn-primary" onclick="createRoom()">Create Room</button>
+    <p class="error hidden" id="host-error"></p>
+  </div>
+
+  <!-- SCREEN 3: join — enter code + name -->
+  <div id="screen-join" class="card hidden">
+    <button class="back" onclick="goToStart()">&larr; back</button>
+    <div class="field">
+      <label>Room code</label>
+      <input type="text" id="join-code" placeholder="e.g. FOX42" maxlength="6" style="text-transform:uppercase">
+    </div>
+    <div class="field">
+      <label>Your name</label>
+      <input type="text" id="join-name" placeholder="e.g. Lulua" maxlength="20">
+    </div>
+    <button class="btn btn-primary" onclick="joinRoom()">Join Room</button>
+    <p class="error hidden" id="join-error"></p>
+  </div>
+
+  <!-- SCREEN 4: waiting room — live list -->
+  <div id="screen-room" class="card hidden">
+    <div class="room-code" id="room-code-display"></div>
+    <p class="room-label">share this code with your family</p>
+    <ul class="players" id="players-list"></ul>
+    <p class="status">players appear here the instant they join — try it from two phones</p>
+  </div>
+
+<script>
+  // ---- your Firebase config ----
+  const firebaseConfig = {
+    apiKey: "AIzaSyBAvhilaqL4R9aTg_1yIJJGTLUablzA-38",
+    authDomain: "family-game-4646b.firebaseapp.com",
+    projectId: "family-game-4646b",
+    storageBucket: "family-game-4646b.firebasestorage.app",
+    messagingSenderId: "404759157112",
+    appId: "1:404759157112:web:66d4d49d728849ca92d08d"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  // quick connection check
+  db.collection("_ping").doc("test").set({ t: Date.now() })
+    .then(() => { document.getElementById('connection-status').textContent = "Connected ✓"; })
+    .catch((err) => { document.getElementById('connection-status').textContent = "Connection failed — is Firestore enabled yet? (" + err.code + ")"; });
+
+  function show(id){
+    ["screen-start","screen-host","screen-join","screen-room"].forEach(s=>{
+      document.getElementById(s).classList.toggle("hidden", s!==id);
+    });
+  }
+  function goToStart(){ show("screen-start"); }
+  function showHost(){ show("screen-host"); }
+  function showJoin(){ show("screen-join"); }
+
+  function randomRoomCode(){
+    const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+    const digits = "23456789";
+    let code = "";
+    for (let i=0;i<3;i++) code += letters[Math.floor(Math.random()*letters.length)];
+    for (let i=0;i<2;i++) code += digits[Math.floor(Math.random()*digits.length)];
+    return code;
+  }
+
+  let currentRoom = null;
+  let unsubscribe = null;
+  async function createRoom(){
+    const name = document.getElementById('host-name').value.trim();
+    const errEl = document.getElementById('host-error');
+    if(!name){ errEl.textContent = "Enter your name first."; errEl.classList.remove('hidden'); return; }
+    errEl.classList.remove('hidden');
+
+    const code = randomRoomCode();
+    try{
+      await db.collection('rooms').doc(code).set({ createdAt: Date.now(), host: name });
+      await db.collection('rooms').doc(code).collection('players').add({ name, joinedAt: Date.now(), isHost: true });
+      enterRoom(code);
+    }catch(err){
+      errEl.textContent = "Couldn't create room (" + err.code + ")";
+      errEl.classList.remove('hidden');
+    }
+  }
+
+  async function joinRoom(){
+    const code = document.getElementById('join-code').value.trim().toUpperCase();
+    const name = document.getElementById('join-name').value.trim();
+    const errEl = document.getElementById('join-error');
+    if(!code || !name){ errEl.textContent = "Enter both room code and your name."; errEl.classList.remove('hidden'); return; }
+    errEl.classList.remove('hidden');
+
+    try{
+      const roomDoc = await db.collection('rooms').doc(code).get();
+      if(!roomDoc.exists){
+        errEl.textContent = "No room with that code.";
+        errEl.classList.remove('hidden');
+        return;
+      }
+      await db.collection('rooms').doc(code).collection('players').add({ name, joinedAt: Date.now(), isHost: false });
+      enterRoom(code);
+    }catch(err){
+      errEl.textContent = "Couldn't join (" + err.code + ")";
+      errEl.classList.remove('hidden');
+    }
+  }
+
+  function enterRoom(code){
+    currentRoom = code;
+    document.getElementById('room-code-display').textContent = code;
+    show('screen-room');
+
+    if(unsubscribe) unsubscribe();
+    unsubscribe = db.collection('rooms').doc(code).collection('players')
+      .orderBy('joinedAt')
+      .onSnapshot(snap => {
+        const list = document.getElementById('players-list');
+        list.innerHTML = "";
+        snap.forEach(doc => {
+          const p = doc.data();
+          const li = document.createElement('li');
+          li.innerHTML = '<span class="dot"></span>' + p.name + (p.isHost ? ' (host)' : '');
+          list.appendChild(li);
+        });
+      });
+  }
+</script>
+</body>
+</html>
