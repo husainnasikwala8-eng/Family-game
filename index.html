@@ -156,7 +156,7 @@
     const uploadUI = document.getElementById('photo-upload-section');
     if (val === 'husain') {
       uploadUI.style.display = 'none';
-      myAvatar = 'husain.jpg'; // Pointing to your specific GitHub upload
+      myAvatar = 'husain.png'; // Pointing to your specific GitHub upload
     } else {
       uploadUI.style.display = 'block';
     }
@@ -261,7 +261,7 @@
       el = document.createElement('div');
       el.id = 'player-' + p.name;
       el.innerHTML = `
-        <img class="player-avatar" src="${p.avatar || 'husain.jpg'}" alt="${p.name}">
+        <img class="player-avatar" src="${p.avatar || 'husain.png'}" alt="${p.name}">
         <div class="player-name">${p.name}</div>
       `;
       document.getElementById('game-world').appendChild(el);
