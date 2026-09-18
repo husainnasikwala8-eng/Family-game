@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape">
-<title>Family Quest</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Family Quest: Spy Agency</title>
 <link rel="manifest" href="manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
@@ -13,62 +13,94 @@
 <style>
   :root { --dark:#1E1A16; --accent:#B4623F; --gold:#C9A05C; --ui-bg:rgba(30,26,22,0.85); }
   body { 
-    margin:0; padding:0; background:var(--dark); color:#fff; font-family:'Inter', sans-serif;
-    overflow: hidden; touch-action: none; /* Prevents mobile scrolling */
+    margin:0; padding:0; background:#000; color:#fff; font-family:'Inter', sans-serif;
+    overflow: hidden; touch-action: none;
   }
   .hidden { display: none !important; }
   
-  /* UI Screens */
-  .screen { position: absolute; top:0; left:0; width:100vw; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--dark); z-index: 100; }
-  .card { background:#2A241E; padding:20px; border-radius:15px; text-align:center; max-width:400px; width:90%; border:1px solid var(--gold); }
-  input { width:90%; padding:12px; margin:10px 0; border-radius:8px; border:none; background:#111; color:#fff; font-size:16px; }
-  button { width:100%; padding:14px; margin-top:10px; border-radius:8px; font-weight:bold; cursor:pointer; background:var(--accent); color:#fff; border:none; font-size:16px; }
-  .dev-credits { position:absolute; bottom:15px; font-size:12px; opacity:0.5; letter-spacing:1px; }
+  /* Landscape Enforcer */
+  #landscape-warning { display: none; position: absolute; z-index: 9999; width: 100vw; height: 100vh; background: var(--dark); flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; box-sizing: border-box; }
+  @media screen and (orientation: portrait) {
+    #landscape-warning { display: flex; }
+  }
 
-  /* Game Canvas & HUD */
-  #game-container { position: absolute; top:0; left:0; width:100vw; height:100vh; background:#333; }
-  canvas { display:block; width:100%; height:100%; }
+  /* UI Screens */
+  .screen { position: absolute; top:0; left:0; width:100vw; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--dark); z-index: 1000; }
+  .card { background:#2A241E; padding:20px; border-radius:15px; text-align:center; max-width:400px; width:90%; border:1px solid var(--gold); }
+  input { width:90%; padding:12px; margin:10px 0; border-radius:8px; border:none; background:#111; color:#fff; font-size:16px; text-align:center; }
+  button { width:100%; padding:14px; margin-top:10px; border-radius:8px; font-weight:bold; cursor:pointer; background:var(--accent); color:#fff; border:none; font-size:16px; }
   
-  /* On-Screen Controls */
-  .controls { position: absolute; bottom: 30px; z-index: 50; }
-  #d-pad { left: 30px; display: grid; grid-template-columns: 60px 60px 60px; grid-template-rows: 60px 60px 60px; gap: 5px; }
-  .d-btn { background: var(--ui-bg); border: 2px solid var(--gold); border-radius: 10px; color: #fff; font-size: 24px; display:flex; align-items:center; justify-content:center; user-select:none; }
+  /* 2.5D Game Engine */
+  #game-viewport { position: absolute; top:0; left:0; width:100vw; height:100vh; overflow:hidden; }
+  
+  /* Public Domain RPG Map Injection */
+  #game-world { 
+    position: absolute; top:0; left:0; width: 2000px; height: 1500px; 
+    background: url('https://upload.wikimedia.org/wikipedia/commons/3/30/2D_RPG_Map_Example.png') center/cover; 
+    background-color: #5C7A5C;
+    will-change: transform; transform-origin: top left;
+  }
+  
+  .player-avatar { 
+    position: absolute; width: 70px; height: 70px; border-radius: 50%; 
+    border: 3px solid var(--gold); object-fit: cover; 
+    box-shadow: 0 10px 15px rgba(0,0,0,0.6);
+    will-change: transform; transform-origin: bottom center;
+  }
+  .player-name {
+    position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.8); padding: 3px 8px; border-radius: 10px;
+    font-size: 11px; white-space: nowrap; font-weight: bold;
+  }
+  .interactable {
+    position: absolute; width: 60px; height: 60px; background: var(--dark);
+    border-radius: 10px; border: 2px solid var(--gold);
+    display:flex; align-items:center; justify-content:center; font-size:24px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+  }
+
+  /* Controls */
+  .controls { position: absolute; z-index: 500; }
+  #d-pad { bottom: 20px; left: 20px; display: grid; grid-template-columns: 55px 55px 55px; gap: 5px; }
+  .d-btn { height: 55px; background: var(--ui-bg); border: 2px solid var(--gold); border-radius: 10px; color: #fff; font-size: 20px; display:flex; align-items:center; justify-content:center; user-select:none; }
   .d-btn:active { background: var(--gold); color: #000; }
   #up { grid-column: 2; grid-row: 1; }
   #left { grid-column: 1; grid-row: 2; }
   #right { grid-column: 3; grid-row: 2; }
   #down { grid-column: 2; grid-row: 3; }
 
-  #action-pad { right: 30px; display:flex; align-items:flex-end; gap:15px; bottom: 50px; }
-  .action-btn { width: 80px; height: 80px; border-radius: 50%; background: var(--ui-bg); border: 3px solid var(--accent); color: #fff; font-weight: bold; font-size: 14px; user-select:none; }
-  .action-btn:active { background: var(--accent); }
+  #action-btn { position: absolute; bottom: 35px; right: 20px; width: 75px; height: 75px; border-radius: 50%; background: var(--ui-bg); border: 3px solid var(--accent); color: #fff; font-weight: bold; font-size: 13px; user-select:none; }
+  #action-btn:active { background: var(--accent); transform:scale(0.95); }
   
-  #notification { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: var(--ui-bg); padding: 10px 20px; border-radius: 20px; border: 1px solid var(--gold); z-index: 60; transition: opacity 0.3s; }
+  #notification { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background: var(--accent); padding: 10px 20px; border-radius: 20px; z-index: 600; transition: opacity 0.3s; font-weight:bold; }
 </style>
 </head>
 <body>
 
-  <!-- Setup & Lobby Screens -->
-  <div id="screen-setup" class="screen">
+  <div id="landscape-warning">
+    <h2>Rotate Device</h2>
+    <p>This operation requires landscape orientation.</p>
+  </div>
+    <div id="screen-setup" class="screen">
     <div class="card">
       <h1 style="color:var(--accent); margin:0 0 5px 0;">Family Quest</h1>
-      <p style="margin-top:0; font-size:14px; opacity:0.8;">Operation Initialization</p>
-      <input type="text" id="player-name" placeholder="Agent Name (e.g. Husain)">
-      <div style="margin:15px 0; padding:15px; border:1px dashed var(--gold); border-radius:8px;">
+      <input type="text" id="player-name" placeholder="Agent Name" onkeyup="checkIdentity()">
+      
+      <div id="photo-upload-section" style="margin:15px 0; padding:15px; border:1px dashed var(--gold); border-radius:8px;">
         <label style="display:block; margin-bottom:10px; font-size:14px;">Upload ID Photo</label>
         <input type="file" accept="image/*" id="photo-input" onchange="handlePhoto(event)">
         <canvas id="avatar-canvas" class="hidden" width="100" height="100" style="margin-top:10px; border-radius:50%; border:2px solid #fff;"></canvas>
       </div>
+      
       <button onclick="enterLobby()">Initialize Profile</button>
     </div>
-    <div class="dev-credits">DEVELOPED BY HN VISUALS</div>
   </div>
 
   <div id="screen-lobby" class="screen hidden">
     <div class="card">
       <h2>Mission Lobby</h2>
       <button onclick="hostGame()">Host New Operation</button>
-      <input type="text" id="join-code" placeholder="Enter Op Code" style="text-align:center; text-transform:uppercase; letter-spacing:2px; margin-top:20px;">
+      <input type="text" id="join-code" placeholder="Enter Op Code" style="text-transform:uppercase; letter-spacing:2px; margin-top:20px;">
       <button onclick="joinGame()" style="background:transparent; border:2px solid var(--accent); color:var(--accent);">Join Operation</button>
     </div>
   </div>
@@ -81,26 +113,28 @@
     </div>
   </div>
 
-  <!-- Game Interface -->
   <div id="screen-game" class="hidden">
-    <div id="game-container">
-      <canvas id="game-canvas"></canvas>
+    <div id="game-viewport">
+      <div id="game-world">
+        <!-- Interactable Puzzle Item -->
+        <div class="interactable" id="vault-1" style="left: 1000px; top: 750px;">🔒</div>
+      </div>
     </div>
+    
     <div id="notification" class="hidden"></div>
     
     <div id="d-pad" class="controls">
-      <div class="d-btn" id="up" ontouchstart="move('up')" onmousedown="move('up')" onmouseup="stop()" ontouchend="stop()">▲</div>
-      <div class="d-btn" id="left" ontouchstart="move('left')" onmousedown="move('left')" onmouseup="stop()" ontouchend="stop()">◀</div>
-      <div class="d-btn" id="right" ontouchstart="move('right')" onmousedown="move('right')" onmouseup="stop()" ontouchend="stop()">▶</div>
-      <div class="d-btn" id="down" ontouchstart="move('down')" onmousedown="move('down')" onmouseup="stop()" ontouchend="stop()">▼</div>
+      <!-- Added event.preventDefault() to stop mobile double-firing -->
+      <div class="d-btn" id="up" ontouchstart="startMove(event, 'up')" onmousedown="startMove(event, 'up')" onmouseup="stopMove(event)" ontouchend="stopMove(event)" onmouseleave="stopMove(event)">▲</div>
+      <div class="d-btn" id="left" ontouchstart="startMove(event, 'left')" onmousedown="startMove(event, 'left')" onmouseup="stopMove(event)" ontouchend="stopMove(event)" onmouseleave="stopMove(event)">◀</div>
+      <div class="d-btn" id="right" ontouchstart="startMove(event, 'right')" onmousedown="startMove(event, 'right')" onmouseup="stopMove(event)" ontouchend="stopMove(event)" onmouseleave="stopMove(event)">▶</div>
+      <div class="d-btn" id="down" ontouchstart="startMove(event, 'down')" onmousedown="startMove(event, 'down')" onmouseup="stopMove(event)" ontouchend="stopMove(event)" onmouseleave="stopMove(event)">▼</div>
     </div>
-    
-    <div id="action-pad" class="controls">
-      <button class="action-btn" onclick="interact()">INTERACT</button>
-    </div>
+    <button id="action-btn" onclick="interact()">INTERACT</button>
   </div>
-  <script>
-  // Firebase Config
+
+<script>
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(err => console.log(err));
   const firebaseConfig = {
     apiKey: "AIzaSyBAvhilaqL4R9aTg_1yIJJGTLUablzA-38",
     authDomain: "family-game-4646b.firebaseapp.com",
@@ -112,31 +146,20 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
 
-  // Globals
   let myName = "";
   let myAvatar = null;
   let currentRoom = null;
   let isHost = false;
-  let otherPlayers = {};
-  
-  // Player coordinate state
-  let myX = 2;
-  let myY = 2;
-  const TILE_SIZE = 64; // Size of map blocks
 
-  // The Structural Map (0=Floor, 1=Wall, 2=Lever, 3=Locked Gate)
-  // We can expand this array to build a massive American suburban town later
-  let gameMap = [
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 0, 0, 0, 1, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 3, 0, 0, 0, 0, 1],
-    [1, 0, 2, 0, 1, 0, 0, 0, 0, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-  ];
-
-  function showScreen(id) {
-    document.querySelectorAll('.screen, #screen-game').forEach(el => el.classList.add('hidden'));
-    document.getElementById(id).classList.remove('hidden');
+  function checkIdentity() {
+    const val = document.getElementById('player-name').value.trim().toLowerCase();
+    const uploadUI = document.getElementById('photo-upload-section');
+    if (val === 'husain') {
+      uploadUI.style.display = 'none';
+      myAvatar = 'husain.jpg'; // Pointing to your specific GitHub upload
+    } else {
+      uploadUI.style.display = 'block';
+    }
   }
 
   function handlePhoto(event) {
@@ -160,60 +183,51 @@
 
   function enterLobby() {
     myName = document.getElementById('player-name').value.trim() || "Agent";
-    // Dev override shortcut
-    if(myName.toLowerCase() === 'husain') myAvatar = "image1.png"; 
-    showScreen('screen-lobby');
+    document.getElementById('screen-setup').classList.add('hidden');
+    document.getElementById('screen-lobby').classList.remove('hidden');
   }
 
   async function hostGame() {
     isHost = true;
     currentRoom = Math.random().toString(36).substring(2, 6).toUpperCase();
-    await db.collection('rooms').doc(currentRoom).set({ status: 'lobby', mapState: JSON.stringify(gameMap) });
+    await db.collection('rooms').doc(currentRoom).set({ status: 'lobby', vaultOpen: false });
     setupRoom(currentRoom);
   }
 
   async function joinGame() {
     const code = document.getElementById('join-code').value.trim().toUpperCase();
-    if(!code) return;
     const doc = await db.collection('rooms').doc(code).get();
-    if(doc.exists) {
-      currentRoom = code;
-      setupRoom(currentRoom);
-    } else {
-      alert("Invalid Op Code");
-    }
+    if(doc.exists) { currentRoom = code; setupRoom(code); } else { alert("Invalid Op Code"); }
   }
 
   function setupRoom(code) {
+    document.getElementById('screen-lobby').classList.add('hidden');
+    document.getElementById('screen-waiting').classList.remove('hidden');
     document.getElementById('display-code').textContent = code;
-    showScreen('screen-waiting');
     if (isHost) document.getElementById('start-btn').classList.remove('hidden');
 
-    // Sync my player to Firebase
-    db.collection('rooms').doc(code).collection('players').doc(myName).set({
-      name: myName, avatar: myAvatar, x: myX, y: myY
-    });
-
-    // Listen for other players joining and moving
     db.collection('rooms').doc(code).collection('players').onSnapshot(snap => {
       const list = document.getElementById('players-list');
       list.innerHTML = "";
       snap.forEach(doc => {
         const p = doc.data();
-        if(p.name !== myName) otherPlayers[p.name] = p; // Store for rendering
         list.innerHTML += `<li style="margin-bottom:10px; font-weight:bold;">🟢 ${p.name}</li>`;
+        if (!document.getElementById('screen-game').classList.contains('hidden')) {
+          updatePlayerElement(p);
+        }
       });
     });
 
-    // Listen for map updates (like the host opening a gate) or game start
     db.collection('rooms').doc(code).onSnapshot(snap => {
       const data = snap.data();
-      if(data) {
-        if (data.mapState) gameMap = JSON.parse(data.mapState);
-        if (data.status === 'playing' && document.getElementById('screen-game').classList.contains('hidden')) {
-          showScreen('screen-game');
-          initGameEngine();
-        }
+      if(data && data.status === 'playing') {
+        document.getElementById('screen-waiting').classList.add('hidden');
+        document.getElementById('screen-game').classList.remove('hidden');
+        initGameEngine();
+      }
+      if(data && data.vaultOpen) {
+        document.getElementById('vault-1').innerHTML = "🔓";
+        document.getElementById('vault-1').style.background = "var(--sage)";
       }
     });
   }
@@ -221,144 +235,101 @@
   async function startGame() {
     await db.collection('rooms').doc(currentRoom).update({ status: 'playing' });
   }
-    // --- Game Engine ---
-  const canvas = document.getElementById('game-canvas');
-  const ctx = canvas.getContext('2d');
-  let loadedAvatars = {}; // Cache images so they don't reload every frame
-  let moveInterval;
-
-  function initGameEngine() {
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-    requestAnimationFrame(gameLoop);
-  }
-
-  function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  }
+      // --- Smooth Physics Engine ---
+  let myX = 800; // Map spawn coordinates
+  let myY = 600;
+  let moveDir = null;
+  const SPEED = 4; // Drastically reduced for smooth control
 
   function notify(text) {
-    const notif = document.getElementById('notification');
-    notif.textContent = text;
-    notif.classList.remove('hidden');
-    setTimeout(() => notif.classList.add('hidden'), 3000);
+    const el = document.getElementById('notification');
+    el.textContent = text;
+    el.classList.remove('hidden');
+    setTimeout(() => el.classList.add('hidden'), 2500);
   }
 
-  // Draw Map and Players
-  function gameLoop() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  function initGameEngine() {
+    db.collection('rooms').doc(currentRoom).collection('players').doc(myName).set({
+      name: myName, avatar: myAvatar, x: myX, y: myY
+    });
+    requestAnimationFrame(gameLoop);
+  }
+
+  function updatePlayerElement(p) {
+    let el = document.getElementById('player-' + p.name);
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'player-' + p.name;
+      el.innerHTML = `
+        <img class="player-avatar" src="${p.avatar || 'husain.jpg'}" alt="${p.name}">
+        <div class="player-name">${p.name}</div>
+      `;
+      document.getElementById('game-world').appendChild(el);
+    }
     
-    // Center the camera on my player
-    const offsetX = (canvas.width / 2) - (myX * TILE_SIZE);
-    const offsetY = (canvas.height / 2) - (myY * TILE_SIZE);
+    // 2.5D Scaling Illusion
+    const scale = 0.6 + (p.y / 1500) * 0.6; 
+    
+    const avatarImg = el.querySelector('.player-avatar');
+    avatarImg.style.transform = `translate(${p.x}px, ${p.y}px) scale(${scale})`;
+    avatarImg.style.zIndex = Math.floor(p.y);
+    el.querySelector('.player-name').style.transform = `translate(calc(${p.x}px - 50% + 35px), ${p.y + 75 * scale}px)`;
+  }
 
-    // Draw Map Grid
-    for(let y = 0; y < gameMap.length; y++) {
-      for(let x = 0; x < gameMap[y].length; x++) {
-        const tile = gameMap[y][x];
-        const drawX = (x * TILE_SIZE) + offsetX;
-        const drawY = (y * TILE_SIZE) + offsetY;
+  // Joystick Controls with strict event overriding
+  function startMove(e, dir) { 
+    e.preventDefault(); // Prevents ghost clicks
+    moveDir = dir; 
+  }
+  function stopMove(e) { 
+    e.preventDefault(); 
+    moveDir = null; 
+    // Final sync on stop to ensure exact position saves
+    if(currentRoom) db.collection('rooms').doc(currentRoom).collection('players').doc(myName).update({ x: myX, y: myY });
+  }
 
-        if(tile === 1) { ctx.fillStyle = "#5C7A5C"; ctx.fillRect(drawX, drawY, TILE_SIZE, TILE_SIZE); } // Wall
-        if(tile === 0) { ctx.fillStyle = "#2A241E"; ctx.fillRect(drawX, drawY, TILE_SIZE, TILE_SIZE); } // Floor
-        if(tile === 2) { 
-          ctx.fillStyle = "#2A241E"; ctx.fillRect(drawX, drawY, TILE_SIZE, TILE_SIZE);
-          ctx.fillStyle = "#C9A05C"; ctx.fillRect(drawX+16, drawY+16, 32, 32); // Lever
-        }
-        if(tile === 3) { ctx.fillStyle = "#8C4A30"; ctx.fillRect(drawX, drawY, TILE_SIZE, TILE_SIZE); } // Gate
+  // Frame execution loop
+  let frameCount = 0;
+  function gameLoop() {
+    let moved = false;
+    if(moveDir === 'up') { myY -= SPEED; moved = true; }
+    if(moveDir === 'down') { myY += SPEED; moved = true; }
+    if(moveDir === 'left') { myX -= SPEED; moved = true; }
+    if(moveDir === 'right') { myX += SPEED; moved = true; }
+
+    // Map limits
+    myX = Math.max(0, Math.min(myX, 1900));
+    myY = Math.max(0, Math.min(myY, 1400));
+
+    // Throttle network sync to prevent database overload (updates every 5th frame)
+    if (moved) {
+      frameCount++;
+      if (frameCount % 5 === 0) {
+        db.collection('rooms').doc(currentRoom).collection('players').doc(myName).update({ x: myX, y: myY });
       }
     }
 
-    // Draw Other Players
-    Object.values(otherPlayers).forEach(p => {
-      drawAvatar(p.avatar, p.x, p.y, offsetX, offsetY, p.name);
-    });
-
-    // Draw My Player
-    drawAvatar(myAvatar, myX, myY, offsetX, offsetY, myName);
+    // Centered Camera Math
+    const world = document.getElementById('game-world');
+    const camX = -myX + (window.innerWidth / 2) - 35;
+    const camY = -myY + (window.innerHeight / 2) - 35;
+    world.style.transform = `translate(${camX}px, ${camY}px)`;
 
     requestAnimationFrame(gameLoop);
   }
 
-  function drawAvatar(src, mapX, mapY, offsetX, offsetY, nameText) {
-    const screenX = (mapX * TILE_SIZE) + offsetX;
-    const screenY = (mapY * TILE_SIZE) + offsetY;
-    
-    if(src && !loadedAvatars[src]) {
-      const img = new Image();
-      img.src = src;
-      loadedAvatars[src] = img;
-    }
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(screenX + 32, screenY + 32, 28, 0, Math.PI * 2);
-    ctx.clip();
-    
-    if(loadedAvatars[src]) {
-      ctx.drawImage(loadedAvatars[src], screenX + 4, screenY + 4, 56, 56);
-    } else {
-      ctx.fillStyle = "#B4623F"; ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
-    }
-    
-    ctx.restore();
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = "#C9A05C";
-    ctx.stroke();
-
-    // Draw name tag
-    ctx.fillStyle = "#fff";
-    ctx.font = "12px Inter";
-    ctx.textAlign = "center";
-    ctx.fillText(nameText, screenX + 32, screenY - 5);
-  }
-
-  // --- Movement & Interaction ---
-  function move(dir) {
-    if(moveInterval) clearInterval(moveInterval);
-    step(dir); // Immediate step
-    moveInterval = setInterval(() => step(dir), 250); // Continuous movement while held
-  }
-  function stop() { clearInterval(moveInterval); }
-
-  function step(dir) {
-    let nextX = myX; let nextY = myY;
-    if(dir === 'up') nextY -= 1;
-    if(dir === 'down') nextY += 1;
-    if(dir === 'left') nextX -= 1;
-    if(dir === 'right') nextX += 1;
-
-    // Map Boundaries & Collision Check
-    if(nextY >= 0 && nextY < gameMap.length && nextX >= 0 && nextX < gameMap[0].length) {
-      if(gameMap[nextY][nextX] === 0 || gameMap[nextY][nextX] === 2) { 
-        myX = nextX; myY = nextY;
-        // Broadcast new position to Firebase instantly
-        db.collection('rooms').doc(currentRoom).collection('players').doc(myName).update({ x: myX, y: myY });
-      } else {
-        notify("Path Blocked!");
-      }
-    }
-  }
-
+  // Generous Interaction Radius
   function interact() {
-    // Check if we are standing on the lever (tile 2)
-    if(gameMap[myY][myX] === 2) {
-      notify("Lever Pulled! Gate Opened.");
-      // Find the gate (tile 3) and change it to floor (tile 0)
-      for(let y=0; y<gameMap.length; y++) {
-        for(let x=0; x<gameMap[y].length; x++) {
-          if(gameMap[y][x] === 3) gameMap[y][x] = 0; 
-        }
-      }
-      // Sync map change to everyone via Firebase
-      db.collection('rooms').doc(currentRoom).update({ mapState: JSON.stringify(gameMap) });
+    // The vault is at X: 1000, Y: 750. 
+    // Increased hit detection radius to 200 for easier alignment
+    const dist = Math.hypot(myX - 1000, myY - 750);
+    if (dist < 200) {
+      db.collection('rooms').doc(currentRoom).update({ vaultOpen: true });
+      notify("Access Granted. Secret Unlocked!");
     } else {
-      notify("Nothing to interact with here.");
+      notify("Move closer to an object to interact.");
     }
   }
 </script>
 </body>
 </html>
-
-  
