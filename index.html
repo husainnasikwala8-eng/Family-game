@@ -159,7 +159,7 @@
     const name = document.getElementById('host-name').value.trim();
     const errEl = document.getElementById('host-error');
     if(!name){ errEl.textContent = "Enter your name first."; errEl.classList.remove('hidden'); return; }
-    errEl.classList.remove('hidden');
+    errEl.classList.add('hidden');
 
     const code = randomRoomCode();
     try{
@@ -168,7 +168,7 @@
       enterRoom(code);
     }catch(err){
       errEl.textContent = "Couldn't create room (" + err.code + ")";
-      errEl.classList.remove('hidden');
+      errEl.classList.add('hidden');
     }
   }
 
