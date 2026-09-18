@@ -1,0 +1,29 @@
+{
+  "title": "Operation: Midnight",
+  "background": "#2A241E",
+  "introText": "Agents, a secret document has been stolen. Interview the suspects and find the code.",
+  "interactables": [
+    {
+      "id": "npc-informant",
+      "type": "character",
+      "name": "The Informant",
+      "x": 20,
+      "y": 30,
+      "color": "#5C7A5C",
+      "dialog": "I saw someone running towards the safe. They mumbled something about the year the agency was founded..."
+    },
+    {
+      "id": "item-safe",
+      "type": "puzzle",
+      "name": "Vault Safe",
+      "x": 70,
+      "y": 60,
+      "color": "#C9A05C",
+      "prompt": "Enter the 4-digit passcode:",
+      "answer": "1995",
+      "successText": "Click! The safe opens. You found the stolen documents!",
+      "failText": "Access Denied. Incorrect passcode."
+    }
+  ]
+}
+
