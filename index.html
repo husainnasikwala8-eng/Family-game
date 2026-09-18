@@ -34,24 +34,37 @@
   #game-viewport { position: absolute; top:0; left:0; width:100vw; height:100vh; overflow:hidden; }
   
   /* Public Domain RPG Map Injection */
-  #game-world { 
+    #game-world { 
     position: absolute; top:0; left:0; width: 2000px; height: 1500px; 
-    background: url('https://upload.wikimedia.org/wikipedia/commons/3/30/2D_RPG_Map_Example.png') center/cover; 
+    /* Reliable map URL */
+    background: url('https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=2000&q=80') center/cover; 
     background-color: #5C7A5C;
     will-change: transform; transform-origin: top left;
+    transform-style: preserve-3d;
   }
   
-  .player-avatar { 
-    position: absolute; width: 70px; height: 70px; border-radius: 50%; 
-    border: 3px solid var(--gold); object-fit: cover; 
-    box-shadow: 0 10px 15px rgba(0,0,0,0.6);
+  /* 3D Hologram Avatar Styling */
+  .player-wrapper {
+    position: absolute; width: 80px; height: 100px;
     will-change: transform; transform-origin: bottom center;
+    perspective: 1000px;
+  }
+  .player-avatar { 
+    width: 100%; height: 80px; border-radius: 10px; 
+    border: 3px solid var(--gold); object-fit: cover; 
+    box-shadow: 0 15px 25px rgba(0,0,0,0.8);
+    transform: rotateX(20deg); /* 3D Tilt */
+    transition: transform 0.2s ease;
+  }
+  .player-wrapper[data-moving="true"] .player-avatar {
+    transform: rotateX(20deg) rotateY(25deg) scale(1.1); /* Rotates when moving */
   }
   .player-name {
-    position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%);
-    background: rgba(0,0,0,0.8); padding: 3px 8px; border-radius: 10px;
-    font-size: 11px; white-space: nowrap; font-weight: bold;
+    position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.9); padding: 4px 10px; border-radius: 10px;
+    font-size: 12px; white-space: nowrap; font-weight: bold; border: 1px solid var(--gold);
   }
+
   .interactable {
     position: absolute; width: 60px; height: 60px; background: var(--dark);
     border-radius: 10px; border: 2px solid var(--gold);
@@ -77,9 +90,12 @@
 </head>
 <body>
 
-  <div id="landscape-warning">
-    <h2>Rotate Device</h2>
+    <div id="landscape-warning">
+    <h2 style="color:var(--gold);">Rotate Device</h2>
     <p>This operation requires landscape orientation.</p>
+    <button onclick="forceRotate()" style="width: 200px; margin-top: 20px; background: var(--gold); color: #000; border: none; padding: 15px; border-radius: 8px; font-weight: bold;">
+      Force Rotate & Play
+    </button
   </div>
     <div id="screen-setup" class="screen">
     <div class="card">
@@ -144,6 +160,22 @@
     appId: "1:404759157112:web:66d4d49d728849ca92d08d"
   };
   firebase.initializeApp(firebaseConfig);
+    async function forceRotate() {
+    try {
+      // 1. Request Fullscreen (required for orientation lock on most phones)
+      if (document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+      }
+      // 2. Force the screen to turn landscape
+      if (screen.orientation && screen.orientation.lock) {
+        await screen.orientation.lock('landscape');
+      }
+      // The CSS landscape-warning will automatically hide itself once the screen turns!
+    } catch (err) {
+      alert("System blocked auto-rotation. Please manually turn your phone sideways.");
+    }
+    }
+  
   const db = firebase.firestore();
 
   let myName = "";
@@ -255,27 +287,33 @@
     requestAnimationFrame(gameLoop);
   }
 
-  function updatePlayerElement(p) {
+    function updatePlayerElement(p) {
     let el = document.getElementById('player-' + p.name);
     if (!el) {
       el = document.createElement('div');
       el.id = 'player-' + p.name;
+      el.className = 'player-wrapper';
       el.innerHTML = `
-        <img class="player-avatar" src="${p.avatar || 'husain.png'}" alt="${p.name}">
+        <img class="player-avatar" src="${p.avatar || 'husain.png'}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/80?text=Agent'">
         <div class="player-name">${p.name}</div>
       `;
       document.getElementById('game-world').appendChild(el);
     }
     
-    // 2.5D Scaling Illusion
+    // 2.5D Scaling
     const scale = 0.6 + (p.y / 1500) * 0.6; 
     
-    const avatarImg = el.querySelector('.player-avatar');
-    avatarImg.style.transform = `translate(${p.x}px, ${p.y}px) scale(${scale})`;
-    avatarImg.style.zIndex = Math.floor(p.y);
-    el.querySelector('.player-name').style.transform = `translate(calc(${p.x}px - 50% + 35px), ${p.y + 75 * scale}px)`;
-  }
+    el.style.transform = `translate(calc(${p.x}px - 40px), calc(${p.y}px - 100px)) scale(${scale})`;
+    el.style.zIndex = Math.floor(p.y);
 
+    // Trigger 3D rotation if it's my character and I am moving
+    if (p.name === myName && moveDir !== null) {
+      el.setAttribute('data-moving', 'true');
+    } else {
+      el.setAttribute('data-moving', 'false');
+    }
+  }
+ 
   // Joystick Controls with strict event overriding
   function startMove(e, dir) { 
     e.preventDefault(); // Prevents ghost clicks
