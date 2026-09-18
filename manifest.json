@@ -1,17 +1,20 @@
 {
-  "name": "Family Quest: Spy Agency",
-  "short_name": "Family Quest",
+  "name": "Family Quest 3D",
+  "short_name": "FamilyQuest",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#1E1A16",
   "theme_color": "#B4623F",
-  "orientation": "landscape",
   "icons": [
     {
-      "src": "image1.png",
+      "src": "https://via.placeholder.com/192.png?text=App",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://via.placeholder.com/512.png?text=App",
       "sizes": "512x512",
-      "type": "image/jpeg"
+      "type": "image/png"
     }
   ]
 }
-
