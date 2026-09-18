@@ -1,0 +1,17 @@
+{
+  "name": "Family Quest: Spy Agency",
+  "short_name": "Family Quest",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#1E1A16",
+  "theme_color": "#B4623F",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "1000020208.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}
+
