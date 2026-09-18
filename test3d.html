@@ -15,7 +15,7 @@
   #status.error{ color:#FF6B6B; }
   canvas{ display:block; }
   #controls{
-    position:fixed; bottom:22px; left:0; right:0;
+    position:fixed; bottom:calc(20px + env(safe-area-inset-bottom)); left:0; right:0;
     display:grid; grid-template-columns:60px 60px 60px; grid-template-rows:60px 60px;
     gap:10px; justify-content:center; z-index:10;
   }
@@ -107,6 +107,12 @@
     bind('btn-left','left');
     bind('btn-right','right');
 
+    // failsafe: force-release every button if a touch ends anywhere,
+    // in case a browser fails to fire pointerup on the exact button
+    function releaseAll(){ input.forward=input.back=input.left=input.right=false; }
+    window.addEventListener('pointerup', releaseAll);
+    window.addEventListener('pointercancel', releaseAll);
+
     setStatus('Loading 3D character…');
     const loader = new GLTFLoader();
     loader.load(
@@ -139,12 +145,12 @@
 
         const moving = input.forward || input.back;
         if(input.forward){
-          model.position.x += Math.sin(model.rotation.y)*moveSpeed*dt;
-          model.position.z += Math.cos(model.rotation.y)*moveSpeed*dt;
+          model.position.x -= Math.sin(model.rotation.y)*moveSpeed*dt;
+          model.position.z -= Math.cos(model.rotation.y)*moveSpeed*dt;
         }
         if(input.back){
-          model.position.x -= Math.sin(model.rotation.y)*moveSpeed*dt*0.6;
-          model.position.z -= Math.cos(model.rotation.y)*moveSpeed*dt*0.6;
+          model.position.x += Math.sin(model.rotation.y)*moveSpeed*dt*0.6;
+          model.position.z += Math.cos(model.rotation.y)*moveSpeed*dt*0.6;
         }
 
         const wantAction = moving ? walkAction : idleAction;
@@ -154,8 +160,8 @@
           currentAction = wantAction;
         }
 
-        const offsetX = -Math.sin(model.rotation.y)*camDistance;
-        const offsetZ = -Math.cos(model.rotation.y)*camDistance;
+        const offsetX = Math.sin(model.rotation.y)*camDistance;
+        const offsetZ = Math.cos(model.rotation.y)*camDistance;
         const desired = new THREE.Vector3(model.position.x+offsetX, model.position.y+camHeight, model.position.z+offsetZ);
         camera.position.lerp(desired, 0.12);
         camera.lookAt(model.position.x, model.position.y+1, model.position.z);
