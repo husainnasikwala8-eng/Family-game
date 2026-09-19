@@ -2,155 +2,139 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Family Quest: Spy Agency</title>
-<link rel="manifest" href="manifest.json">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Family Quest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 
 <style>
-  :root { --dark:#1E1A16; --accent:#B4623F; --gold:#C9A05C; --ui-bg:rgba(30,26,22,0.85); }
-  body { 
-    margin:0; padding:0; background:#000; color:#fff; font-family:'Inter', sans-serif;
-    overflow: hidden; touch-action: none;
+  :root{
+    --sand:#F2E9D8; --card:#FFFDF8; --terracotta:#B4623F; --terracotta-deep:#8C4A30;
+    --sage:#5C7A5C; --ink:#2B2420;
+    font-family:'Inter',system-ui,sans-serif;
   }
-  .hidden { display: none !important; }
-  
-  /* Landscape Enforcer */
-  #landscape-warning { display: none; position: absolute; z-index: 9999; width: 100vw; height: 100vh; background: var(--dark); flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; box-sizing: border-box; }
-  @media screen and (orientation: portrait) {
-    #landscape-warning { display: flex; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; background:var(--sand); color:var(--ink); }
+  body{ display:flex; flex-direction:column; align-items:center; padding:28px 18px 60px; overflow-x:hidden; }
+  h1{ font-family:'Fraunces',serif; font-weight:700; font-size:32px; margin:0 0 4px; }
+  .sub{ opacity:0.65; font-size:14px; margin:0 0 28px; text-align:center; }
+  .card{
+    background:var(--card); border:1px solid rgba(180,98,63,0.14);
+    border-radius:20px; padding:24px 20px; width:100%; max-width:380px;
+    box-shadow:0 2px 0 rgba(140,74,48,0.06);
   }
+  .btn{
+    display:block; width:100%; padding:14px; border-radius:12px; border:none;
+    font-family:'Inter',sans-serif; font-weight:600; font-size:16px; cursor:pointer; margin-top:10px;
+  }
+  .btn-primary{ background:var(--terracotta); color:#fff; }
+  .btn-secondary{ background:transparent; color:var(--terracotta-deep); border:1.5px solid var(--terracotta); }
+  input[type=text]{
+    width:100%; padding:13px 14px; border-radius:10px; border:1.5px solid rgba(180,98,63,0.25);
+    font-size:16px; font-family:'Inter',sans-serif; margin-top:6px; background:var(--sand); color:var(--ink);
+  }
+  label{ font-size:13px; font-weight:600; opacity:0.75; }
+  .field{ margin-bottom:14px; }
+  .hidden{ display:none !important; }
+  .status-text{ font-size:13px; text-align:center; opacity:0.6; margin-top:14px; }
+  .error{ color:var(--terracotta-deep); font-size:13px; margin-top:8px; text-align:center; }
+  .back{ background:none; border:none; color:var(--terracotta-deep); font-size:13px; font-weight:600; margin-bottom:14px; cursor:pointer; padding:0; }
 
-  /* UI Screens */
-  .screen { position: absolute; top:0; left:0; width:100vw; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--dark); z-index: 1000; }
-  .card { background:#2A241E; padding:20px; border-radius:15px; text-align:center; max-width:400px; width:90%; border:1px solid var(--gold); }
-  input { width:90%; padding:12px; margin:10px 0; border-radius:8px; border:none; background:#111; color:#fff; font-size:16px; text-align:center; }
-  button { width:100%; padding:14px; margin-top:10px; border-radius:8px; font-weight:bold; cursor:pointer; background:var(--accent); color:#fff; border:none; font-size:16px; }
-  
-  /* 2.5D Game Engine */
-  #game-viewport { position: absolute; top:0; left:0; width:100vw; height:100vh; overflow:hidden; }
-  
-  /* Public Domain RPG Map Injection */
-    #game-world { 
-    position: absolute; top:0; left:0; width: 2000px; height: 1500px; 
-    /* Reliable map URL */
-    background: url('https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=2000&q=80') center/cover; 
-    background-color: #5C7A5C;
-    will-change: transform; transform-origin: top left;
-    transform-style: preserve-3d;
+  /* ---- 3D game screen ---- */
+  #game-screen{
+    position:fixed; inset:0; background:#1a1a1a; z-index:5;
   }
-  
-  /* 3D Hologram Avatar Styling */
-  .player-wrapper {
-    position: absolute; width: 80px; height: 100px;
-    will-change: transform; transform-origin: bottom center;
-    perspective: 1000px;
+  #game-status{
+    position:fixed; top:0; left:0; right:0; z-index:10;
+    background:rgba(0,0,0,0.75); color:#7CFC98;
+    font-family:monospace; font-size:12px; padding:8px 12px;
+    white-space:pre-wrap; word-break:break-word;
   }
-  .player-avatar { 
-    width: 100%; height: 80px; border-radius: 10px; 
-    border: 3px solid var(--gold); object-fit: cover; 
-    box-shadow: 0 15px 25px rgba(0,0,0,0.8);
-    transform: rotateX(20deg); /* 3D Tilt */
-    transition: transform 0.2s ease;
+  #game-status.error{ color:#FF6B6B; }
+  #room-badge{
+    position:fixed; top:36px; left:12px; z-index:10;
+    background:rgba(0,0,0,0.5); color:#F2E9D8; font-family:'Fraunces',serif;
+    font-size:20px; letter-spacing:0.05em; padding:4px 10px; border-radius:8px;
   }
-  .player-wrapper[data-moving="true"] .player-avatar {
-    transform: rotateX(20deg) rotateY(25deg) scale(1.1); /* Rotates when moving */
+  #controls{
+    position:fixed; bottom:calc(20px + env(safe-area-inset-bottom)); left:0; right:0;
+    display:grid; grid-template-columns:60px 60px 60px; grid-template-rows:60px 60px;
+    gap:10px; justify-content:center; z-index:10;
   }
-  .player-name {
-    position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
-    background: rgba(0,0,0,0.9); padding: 4px 10px; border-radius: 10px;
-    font-size: 12px; white-space: nowrap; font-weight: bold; border: 1px solid var(--gold);
+  .ctrl-btn{
+    width:60px; height:60px; border-radius:14px; border:none;
+    background:rgba(255,255,255,0.18); color:#fff; font-size:24px;
+    -webkit-tap-highlight-color:transparent; touch-action:none; user-select:none;
   }
-
-  .interactable {
-    position: absolute; width: 60px; height: 60px; background: var(--dark);
-    border-radius: 10px; border: 2px solid var(--gold);
-    display:flex; align-items:center; justify-content:center; font-size:24px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-  }
-
-  /* Controls */
-  .controls { position: absolute; z-index: 500; }
-  #d-pad { bottom: 20px; left: 20px; display: grid; grid-template-columns: 55px 55px 55px; gap: 5px; }
-  .d-btn { height: 55px; background: var(--ui-bg); border: 2px solid var(--gold); border-radius: 10px; color: #fff; font-size: 20px; display:flex; align-items:center; justify-content:center; user-select:none; }
-  .d-btn:active { background: var(--gold); color: #000; }
-  #up { grid-column: 2; grid-row: 1; }
-  #left { grid-column: 1; grid-row: 2; }
-  #right { grid-column: 3; grid-row: 2; }
-  #down { grid-column: 2; grid-row: 3; }
-
-  #action-btn { position: absolute; bottom: 35px; right: 20px; width: 75px; height: 75px; border-radius: 50%; background: var(--ui-bg); border: 3px solid var(--accent); color: #fff; font-weight: bold; font-size: 13px; user-select:none; }
-  #action-btn:active { background: var(--accent); transform:scale(0.95); }
-  
-  #notification { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background: var(--accent); padding: 10px 20px; border-radius: 20px; z-index: 600; transition: opacity 0.3s; font-weight:bold; }
+  .ctrl-btn:active{ background:rgba(255,255,255,0.35); }
+  #btn-left{ grid-column:1; grid-row:2; }
+  #btn-forward{ grid-column:2; grid-row:1; }
+  #btn-back{ grid-column:2; grid-row:2; }
+  #btn-right{ grid-column:3; grid-row:2; }
 </style>
 </head>
 <body>
 
-    <div id="landscape-warning">
-    <h2 style="color:var(--gold);">Rotate Device</h2>
-    <p>This operation requires landscape orientation.</p>
-    <button onclick="forceRotate()" style="width: 200px; margin-top: 20px; background: var(--gold); color: #000; border: none; padding: 15px; border-radius: 8px; font-weight: bold;">
-      Force Rotate & Play
-    </button
-  </div>
-    <div id="screen-setup" class="screen">
-    <div class="card">
-      <h1 style="color:var(--accent); margin:0 0 5px 0;">Family Quest</h1>
-      <input type="text" id="player-name" placeholder="Agent Name" onkeyup="checkIdentity()">
-      
-      <div id="photo-upload-section" style="margin:15px 0; padding:15px; border:1px dashed var(--gold); border-radius:8px;">
-        <label style="display:block; margin-bottom:10px; font-size:14px;">Upload ID Photo</label>
-        <input type="file" accept="image/*" id="photo-input" onchange="handlePhoto(event)">
-        <canvas id="avatar-canvas" class="hidden" width="100" height="100" style="margin-top:10px; border-radius:50%; border:2px solid #fff;"></canvas>
+  <h1>Family Quest</h1>
+  <p class="sub">Host or join a room, then walk around together in 3D.</p>
+
+  <div id="lobby">
+    <div id="screen-start" class="card">
+      <button class="btn btn-primary" onclick="showHost()">Host a Room</button>
+      <button class="btn btn-secondary" onclick="showJoin()">Join a Room</button>
+      <p class="status-text" id="connection-status">Connecting…</p>
+    </div>
+
+    <div id="screen-host" class="card hidden">
+      <button class="back" onclick="goToStart()">&larr; back</button>
+      <div class="field">
+        <label>Your name</label>
+        <input type="text" id="host-name" placeholder="e.g. Husain" maxlength="20">
       </div>
-      
-      <button onclick="enterLobby()">Initialize Profile</button>
+      <button class="btn btn-primary" onclick="createRoom()">Create Room</button>
+      <p class="error hidden" id="host-error"></p>
     </div>
-  </div>
 
-  <div id="screen-lobby" class="screen hidden">
-    <div class="card">
-      <h2>Mission Lobby</h2>
-      <button onclick="hostGame()">Host New Operation</button>
-      <input type="text" id="join-code" placeholder="Enter Op Code" style="text-transform:uppercase; letter-spacing:2px; margin-top:20px;">
-      <button onclick="joinGame()" style="background:transparent; border:2px solid var(--accent); color:var(--accent);">Join Operation</button>
-    </div>
-  </div>
-
-  <div id="screen-waiting" class="screen hidden">
-    <div class="card">
-      <h2>Op Code: <span id="display-code" style="color:var(--gold);"></span></h2>
-      <ul id="players-list" style="list-style:none; padding:0; text-align:left;"></ul>
-      <button id="start-btn" class="hidden" onclick="startGame()">Deploy Agents</button>
-    </div>
-  </div>
-
-  <div id="screen-game" class="hidden">
-    <div id="game-viewport">
-      <div id="game-world">
-        <!-- Interactable Puzzle Item -->
-        <div class="interactable" id="vault-1" style="left: 1000px; top: 750px;">🔒</div>
+    <div id="screen-join" class="card hidden">
+      <button class="back" onclick="goToStart()">&larr; back</button>
+      <div class="field">
+        <label>Room code</label>
+        <input type="text" id="join-code" placeholder="e.g. FOX42" maxlength="6" style="text-transform:uppercase">
       </div>
+      <div class="field">
+        <label>Your name</label>
+        <input type="text" id="join-name" placeholder="e.g. Lulua" maxlength="20">
+      </div>
+      <button class="btn btn-primary" onclick="joinRoom()">Join Room</button>
+      <p class="error hidden" id="join-error"></p>
     </div>
-    
-    <div id="notification" class="hidden"></div>
-    
-    <div id="d-pad" class="controls">
-      <!-- Added event.preventDefault() to stop mobile double-firing -->
-      <div class="d-btn" id="up" ontouchstart="startMove(event, 'up')" onmousedown="startMove(event, 'up')" onmouseup="stopMove(event)" ontouchend="stopMove(event)" onmouseleave="stopMove(event)">▲</div>
-      <div class="d-btn" id="left" ontouchstart="startMove(event, 'left')" onmousedown="startMove(event, 'left')" onmouseup="stopMove(event)" ontouchend="stopMove(event)" onmouseleave="stopMove(event)">◀</div>
-      <div class="d-btn" id="right" ontouchstart="startMove(event, 'right')" onmousedown="startMove(event, 'right')" onmouseup="stopMove(event)" ontouchend="stopMove(event)" onmouseleave="stopMove(event)">▶</div>
-      <div class="d-btn" id="down" ontouchstart="startMove(event, 'down')" onmousedown="startMove(event, 'down')" onmouseup="stopMove(event)" ontouchend="stopMove(event)" onmouseleave="stopMove(event)">▼</div>
-    </div>
-    <button id="action-btn" onclick="interact()">INTERACT</button>
   </div>
 
-<script>
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(err => console.log(err));
+  <div id="game-screen" class="hidden">
+    <div id="game-status">Starting…</div>
+    <div id="room-badge"></div>
+    <div id="controls">
+      <button id="btn-left" class="ctrl-btn">◀</button>
+      <button id="btn-forward" class="ctrl-btn">▲</button>
+      <button id="btn-back" class="ctrl-btn">▼</button>
+      <button id="btn-right" class="ctrl-btn">▶</button>
+    </div>
+  </div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+  // ================= Firebase =================
   const firebaseConfig = {
     apiKey: "AIzaSyBAvhilaqL4R9aTg_1yIJJGTLUablzA-38",
     authDomain: "family-game-4646b.firebaseapp.com",
@@ -160,214 +144,297 @@
     appId: "1:404759157112:web:66d4d49d728849ca92d08d"
   };
   firebase.initializeApp(firebaseConfig);
-    async function forceRotate() {
-    try {
-      // 1. Request Fullscreen (required for orientation lock on most phones)
-      if (document.documentElement.requestFullscreen) {
-        await document.documentElement.requestFullscreen();
-      }
-      // 2. Force the screen to turn landscape
-      if (screen.orientation && screen.orientation.lock) {
-        await screen.orientation.lock('landscape');
-      }
-      // The CSS landscape-warning will automatically hide itself once the screen turns!
-    } catch (err) {
-      alert("System blocked auto-rotation. Please manually turn your phone sideways.");
-    }
-    }
-  
   const db = firebase.firestore();
 
-  let myName = "";
-  let myAvatar = null;
-  let currentRoom = null;
-  let isHost = false;
+  db.collection("_ping").doc("test").set({ t: Date.now() })
+    .then(() => { document.getElementById('connection-status').textContent = "Connected ✓"; })
+    .catch((err) => { document.getElementById('connection-status').textContent = "Connection failed (" + err.code + ")"; });
 
-  function checkIdentity() {
-    const val = document.getElementById('player-name').value.trim().toLowerCase();
-    const uploadUI = document.getElementById('photo-upload-section');
-    if (val === 'husain') {
-      uploadUI.style.display = 'none';
-      myAvatar = 'husain.png'; // Pointing to your specific GitHub upload
-    } else {
-      uploadUI.style.display = 'block';
+  // ================= Three.js core =================
+  const THREE = await import('three');
+  const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+  const SkeletonUtils = await import('three/addons/utils/SkeletonUtils.js');
+  const { CSS2DRenderer, CSS2DObject } = await import('three/addons/renderers/CSS2DRenderer.js');
+
+  const gameStatusEl = document.getElementById('game-status');
+  function setGameStatus(msg, isError){
+    gameStatusEl.textContent = msg;
+    gameStatusEl.classList.toggle('error', !!isError);
+  }
+  window.addEventListener('error', (e) => setGameStatus('Script error: ' + e.message, true));
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x2b2420);
+  const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 100);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  const labelRenderer = new CSS2DRenderer();
+  labelRenderer.setSize(window.innerWidth, window.innerHeight);
+  labelRenderer.domElement.style.position = 'absolute';
+  labelRenderer.domElement.style.top = '0px';
+  labelRenderer.domElement.style.left = '0px';
+  labelRenderer.domElement.style.zIndex = '6';
+  labelRenderer.domElement.style.pointerEvents = 'none';
+
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 2));
+  const dirLight = new THREE.DirectionalLight(0xffffff, 2);
+  dirLight.position.set(3,5,3);
+  scene.add(dirLight);
+
+  const mapLimit = 14;
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(mapLimit*2, mapLimit*2),
+    new THREE.MeshStandardMaterial({ color: 0x5C7A5C })
+  );
+  ground.rotation.x = -Math.PI/2;
+  scene.add(ground);
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    labelRenderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // points of interest — empty until a storyline file adds some.
+  // future storyline files can: window.pointsOfInterest.push({x, z, label})
+  window.pointsOfInterest = [];
+
+  let baseGltf = null;
+  const modelReady = new Promise((resolve) => {
+    new GLTFLoader().load(
+      'https://threejs.org/examples/models/gltf/Soldier.glb',
+      (gltf) => { baseGltf = gltf; resolve(); },
+      undefined,
+      (err) => { setGameStatus('Model failed to load: ' + (err.message||err), true); }
+    );
+  });
+
+  function findClip(name){
+    return baseGltf.animations.find(a => new RegExp(name,'i').test(a.name)) || baseGltf.animations[0];
+  }
+
+  function spawnCharacter(name){
+    const model = SkeletonUtils.clone(baseGltf.scene);
+    scene.add(model);
+    const mixer = new THREE.AnimationMixer(model);
+    const idleAction = mixer.clipAction(findClip('idle'));
+    const walkAction = mixer.clipAction(findClip('walk'));
+    idleAction.play();
+
+    const div = document.createElement('div');
+    div.className = 'name-label';
+    div.textContent = name;
+    const label = new CSS2DObject(div);
+    label.position.set(0, 2.2, 0);
+    model.add(label);
+
+    return { model, mixer, idleAction, walkAction, currentAction: idleAction, moving:false };
+  }
+    const turnSpeed = 2.2, moveSpeed = 2.5;
+  const camDistance = 5, camHeight = 3.0;
+
+  let localChar = null;
+  let myDocRef = null;
+  const remoteChars = new Map(); // docId -> character object with targetX/targetZ/targetRot
+
+  const input = { forward:false, back:false, left:false, right:false };
+  function bindBtn(id, key){
+    const el = document.getElementById(id);
+    const on = (e) => { e.preventDefault(); input[key] = true; };
+    const off = (e) => { e.preventDefault(); input[key] = false; };
+    el.addEventListener('pointerdown', on);
+    el.addEventListener('pointerup', off);
+    el.addEventListener('pointercancel', off);
+    el.addEventListener('pointerleave', off);
+  }
+  bindBtn('btn-forward','forward'); bindBtn('btn-back','back');
+  bindBtn('btn-left','left');       bindBtn('btn-right','right');
+  function releaseAll(){ input.forward=input.back=input.left=input.right=false; }
+  window.addEventListener('pointerup', releaseAll);
+  window.addEventListener('pointercancel', releaseAll);
+
+  function updateActionState(ch, moving, reverse){
+    const want = moving ? ch.walkAction : ch.idleAction;
+    if(want !== ch.currentAction){
+      ch.currentAction.fadeOut(0.15);
+      want.reset().fadeIn(0.15).play();
+      ch.currentAction = want;
+    }
+    ch.walkAction.timeScale = reverse ? -1 : 1;
+  }
+
+  // ---- minimap ----
+  const minimapCanvas = document.getElementById('minimap');
+  const mctx = minimapCanvas.getContext('2d');
+  function worldToMap(x, z){
+    return [
+      ((x + mapLimit) / (mapLimit*2)) * minimapCanvas.width,
+      ((z + mapLimit) / (mapLimit*2)) * minimapCanvas.height
+    ];
+  }
+  function drawMinimap(){
+    mctx.clearRect(0,0,minimapCanvas.width,minimapCanvas.height);
+    window.pointsOfInterest.forEach(p => {
+      const [mx,my] = worldToMap(p.x, p.z);
+      mctx.fillStyle = '#C9A05C';
+      mctx.beginPath(); mctx.arc(mx,my,3,0,Math.PI*2); mctx.fill();
+    });
+    remoteChars.forEach(ch => {
+      const [mx,my] = worldToMap(ch.model.position.x, ch.model.position.z);
+      mctx.fillStyle = '#E4483A';
+      mctx.beginPath(); mctx.arc(mx,my,3,0,Math.PI*2); mctx.fill();
+    });
+    if(localChar){
+      const [mx,my] = worldToMap(localChar.model.position.x, localChar.model.position.z);
+      mctx.fillStyle = '#ffffff';
+      mctx.beginPath(); mctx.arc(mx,my,4,0,Math.PI*2); mctx.fill();
     }
   }
 
-  function handlePhoto(event) {
-    const file = event.target.files[0];
-    if(!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.getElementById('avatar-canvas');
-        const ctx = canvas.getContext('2d');
-        const size = Math.min(img.width, img.height);
-        ctx.drawImage(img, (img.width - size)/2, (img.height - size)/2, size, size, 0, 0, 100, 100);
-        canvas.classList.remove('hidden');
-        myAvatar = canvas.toDataURL('image/jpeg', 0.6);
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
+  let lastSent = 0;
+  const clock = new THREE.Clock();
+
+  function animate(){
+    requestAnimationFrame(animate);
+    const dt = Math.min(clock.getDelta(), 0.05);
+
+    if(localChar){
+      const m = localChar.model;
+      if(input.left)  m.rotation.y += turnSpeed*dt;
+      if(input.right) m.rotation.y -= turnSpeed*dt;
+      if(input.forward){ m.position.x -= Math.sin(m.rotation.y)*moveSpeed*dt; m.position.z -= Math.cos(m.rotation.y)*moveSpeed*dt; }
+      if(input.back){ m.position.x += Math.sin(m.rotation.y)*moveSpeed*dt*0.6; m.position.z += Math.cos(m.rotation.y)*moveSpeed*dt*0.6; }
+      m.position.x = THREE.MathUtils.clamp(m.position.x, -mapLimit, mapLimit);
+      m.position.z = THREE.MathUtils.clamp(m.position.z, -mapLimit, mapLimit);
+
+      const moving = input.forward || input.back;
+      updateActionState(localChar, moving, input.back && !input.forward);
+
+      const offsetX = Math.sin(m.rotation.y)*camDistance;
+      const offsetZ = Math.cos(m.rotation.y)*camDistance;
+      const desired = new THREE.Vector3(m.position.x+offsetX, m.position.y+camHeight, m.position.z+offsetZ);
+      camera.position.lerp(desired, 0.12);
+      camera.lookAt(m.position.x, m.position.y+1.4, m.position.z);
+
+      localChar.mixer.update(dt);
+
+      const now = performance.now();
+      if(myDocRef && now - lastSent > 150){
+        lastSent = now;
+        myDocRef.update({ x: m.position.x, z: m.position.z, rotY: m.rotation.y, moving }).catch(()=>{});
+      }
+    }
+
+    remoteChars.forEach(ch => {
+      ch.model.position.x += (ch.targetX - ch.model.position.x)*0.2;
+      ch.model.position.z += (ch.targetZ - ch.model.position.z)*0.2;
+      ch.model.rotation.y = ch.targetRot;
+      updateActionState(ch, ch.moving, false);
+      ch.mixer.update(dt);
+    });
+
+    drawMinimap();
+    renderer.render(scene, camera);
+    labelRenderer.render(scene, camera);
+  }
+  animate();
+  // ================= Storyline auto-loader =================
+  // Looks for ./storyline-1.js, ./storyline-2.js, etc. — nothing to
+  // configure by name. If the file doesn't exist yet, this quietly
+  // does nothing until you create it in a future session.
+  let roomRef = null;
+
+  async function loadStoryline(n){
+    try{
+      const mod = await import(`./storyline-${n}.js`);
+      if(mod.init){
+        mod.init({ scene, THREE, spawnCharacter, pointsOfInterest: window.pointsOfInterest, advanceStoryline: window.advanceStoryline });
+      }
+    }catch(e){
+      // no storyline file for this number yet — expected until one is added
+    }
   }
 
-  function enterLobby() {
-    myName = document.getElementById('player-name').value.trim() || "Agent";
-    document.getElementById('screen-setup').classList.add('hidden');
-    document.getElementById('screen-lobby').classList.remove('hidden');
-  }
+  window.advanceStoryline = async function(){
+    if(!roomRef) return;
+    const snap = await roomRef.get();
+    const next = (snap.data().currentStoryline || 1) + 1;
+    await roomRef.update({ currentStoryline: next });
+    loadStoryline(next);
+  };
 
-  async function hostGame() {
-    isHost = true;
-    currentRoom = Math.random().toString(36).substring(2, 6).toUpperCase();
-    await db.collection('rooms').doc(currentRoom).set({ status: 'lobby', vaultOpen: false });
-    setupRoom(currentRoom);
-  }
+  // ================= Entering the world =================
+  async function enterGame(code, myId, name, startingStoryline){
+    document.getElementById('lobby').classList.add('hidden');
+    document.getElementById('game-screen').classList.remove('hidden');
+    document.getElementById('room-badge').textContent = code;
+    document.getElementById('game-screen').prepend(labelRenderer.domElement);
+    document.getElementById('game-screen').prepend(renderer.domElement);
 
-  async function joinGame() {
-    const code = document.getElementById('join-code').value.trim().toUpperCase();
-    const doc = await db.collection('rooms').doc(code).get();
-    if(doc.exists) { currentRoom = code; setupRoom(code); } else { alert("Invalid Op Code"); }
-  }
+    setGameStatus('Loading world…');
+    await modelReady;
+    setGameStatus('Ready — use the buttons to move');
 
-  function setupRoom(code) {
-    document.getElementById('screen-lobby').classList.add('hidden');
-    document.getElementById('screen-waiting').classList.remove('hidden');
-    document.getElementById('display-code').textContent = code;
-    if (isHost) document.getElementById('start-btn').classList.remove('hidden');
+    localChar = spawnCharacter(name);
+    myDocRef = db.collection('rooms').doc(code).collection('players').doc(myId);
 
     db.collection('rooms').doc(code).collection('players').onSnapshot(snap => {
-      const list = document.getElementById('players-list');
-      list.innerHTML = "";
-      snap.forEach(doc => {
-        const p = doc.data();
-        list.innerHTML += `<li style="margin-bottom:10px; font-weight:bold;">🟢 ${p.name}</li>`;
-        if (!document.getElementById('screen-game').classList.contains('hidden')) {
-          updatePlayerElement(p);
+      snap.docChanges().forEach(change => {
+        const id = change.doc.id;
+        if(id === myId) return;
+        const data = change.doc.data();
+        if(change.type === 'removed'){
+          const ch = remoteChars.get(id);
+          if(ch){ scene.remove(ch.model); remoteChars.delete(id); }
+          return;
+        }
+        if(!remoteChars.has(id)){
+          const ch = spawnCharacter(data.name || 'Player');
+          ch.targetX = data.x||0; ch.targetZ = data.z||0; ch.targetRot = data.rotY||0; ch.moving = !!data.moving;
+          ch.model.position.set(ch.targetX, 0, ch.targetZ);
+          remoteChars.set(id, ch);
+        } else {
+          const ch = remoteChars.get(id);
+          ch.targetX = data.x ?? ch.targetX;
+          ch.targetZ = data.z ?? ch.targetZ;
+          ch.targetRot = data.rotY ?? ch.targetRot;
+          ch.moving = !!data.moving;
         }
       });
     });
 
-    db.collection('rooms').doc(code).onSnapshot(snap => {
-      const data = snap.data();
-      if(data && data.status === 'playing') {
-        document.getElementById('screen-waiting').classList.add('hidden');
-        document.getElementById('screen-game').classList.remove('hidden');
-        initGameEngine();
+    loadStoryline(startingStoryline);
+  }
+
+  window.enterWorld = async function(){
+    const code = document.getElementById('family-code').value.trim().toUpperCase();
+    const name = document.getElementById('player-name').value.trim();
+    const errEl = document.getElementById('lobby-error');
+    if(!code || !name){ errEl.textContent = "Enter both a family code and your name."; errEl.classList.remove('hidden'); return; }
+    errEl.classList.add('hidden');
+
+    try{
+      roomRef = db.collection('rooms').doc(code);
+      const roomSnap = await roomRef.get();
+      let currentStoryline = 1;
+      if(!roomSnap.exists){
+        await roomRef.set({ createdAt: Date.now(), currentStoryline: 1 });
+      } else {
+        currentStoryline = roomSnap.data().currentStoryline || 1;
       }
-      if(data && data.vaultOpen) {
-        document.getElementById('vault-1').innerHTML = "🔓";
-        document.getElementById('vault-1').style.background = "var(--sage)";
-      }
-    });
-  }
-
-  async function startGame() {
-    await db.collection('rooms').doc(currentRoom).update({ status: 'playing' });
-  }
-      // --- Smooth Physics Engine ---
-  let myX = 800; // Map spawn coordinates
-  let myY = 600;
-  let moveDir = null;
-  const SPEED = 4; // Drastically reduced for smooth control
-
-  function notify(text) {
-    const el = document.getElementById('notification');
-    el.textContent = text;
-    el.classList.remove('hidden');
-    setTimeout(() => el.classList.add('hidden'), 2500);
-  }
-
-  function initGameEngine() {
-    db.collection('rooms').doc(currentRoom).collection('players').doc(myName).set({
-      name: myName, avatar: myAvatar, x: myX, y: myY
-    });
-    requestAnimationFrame(gameLoop);
-  }
-
-    function updatePlayerElement(p) {
-    let el = document.getElementById('player-' + p.name);
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'player-' + p.name;
-      el.className = 'player-wrapper';
-      el.innerHTML = `
-        <img class="player-avatar" src="${p.avatar || 'husain.png'}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/80?text=Agent'">
-        <div class="player-name">${p.name}</div>
-      `;
-      document.getElementById('game-world').appendChild(el);
+      const ref = await roomRef.collection('players').add({
+        name, joinedAt: Date.now(), x:0, z:0, rotY:0, moving:false
+      });
+      enterGame(code, ref.id, name, currentStoryline);
+    }catch(err){
+      errEl.textContent = "Couldn't connect (" + err.code + ")";
+      errEl.classList.remove('hidden');
     }
-    
-    // 2.5D Scaling
-    const scale = 0.6 + (p.y / 1500) * 0.6; 
-    
-    el.style.transform = `translate(calc(${p.x}px - 40px), calc(${p.y}px - 100px)) scale(${scale})`;
-    el.style.zIndex = Math.floor(p.y);
-
-    // Trigger 3D rotation if it's my character and I am moving
-    if (p.name === myName && moveDir !== null) {
-      el.setAttribute('data-moving', 'true');
-    } else {
-      el.setAttribute('data-moving', 'false');
-    }
-  }
- 
-  // Joystick Controls with strict event overriding
-  function startMove(e, dir) { 
-    e.preventDefault(); // Prevents ghost clicks
-    moveDir = dir; 
-  }
-  function stopMove(e) { 
-    e.preventDefault(); 
-    moveDir = null; 
-    // Final sync on stop to ensure exact position saves
-    if(currentRoom) db.collection('rooms').doc(currentRoom).collection('players').doc(myName).update({ x: myX, y: myY });
-  }
-
-  // Frame execution loop
-  let frameCount = 0;
-  function gameLoop() {
-    let moved = false;
-    if(moveDir === 'up') { myY -= SPEED; moved = true; }
-    if(moveDir === 'down') { myY += SPEED; moved = true; }
-    if(moveDir === 'left') { myX -= SPEED; moved = true; }
-    if(moveDir === 'right') { myX += SPEED; moved = true; }
-
-    // Map limits
-    myX = Math.max(0, Math.min(myX, 1900));
-    myY = Math.max(0, Math.min(myY, 1400));
-
-    // Throttle network sync to prevent database overload (updates every 5th frame)
-    if (moved) {
-      frameCount++;
-      if (frameCount % 5 === 0) {
-        db.collection('rooms').doc(currentRoom).collection('players').doc(myName).update({ x: myX, y: myY });
-      }
-    }
-
-    // Centered Camera Math
-    const world = document.getElementById('game-world');
-    const camX = -myX + (window.innerWidth / 2) - 35;
-    const camY = -myY + (window.innerHeight / 2) - 35;
-    world.style.transform = `translate(${camX}px, ${camY}px)`;
-
-    requestAnimationFrame(gameLoop);
-  }
-
-  // Generous Interaction Radius
-  function interact() {
-    // The vault is at X: 1000, Y: 750. 
-    // Increased hit detection radius to 200 for easier alignment
-    const dist = Math.hypot(myX - 1000, myY - 750);
-    if (dist < 200) {
-      db.collection('rooms').doc(currentRoom).update({ vaultOpen: true });
-      notify("Access Granted. Secret Unlocked!");
-    } else {
-      notify("Move closer to an object to interact.");
-    }
-  }
+  };
 </script>
 </body>
 </html>
