@@ -32,7 +32,6 @@
     font-family:'Inter',sans-serif; font-weight:600; font-size:16px; cursor:pointer; margin-top:10px;
   }
   .btn-primary{ background:var(--terracotta); color:#fff; }
-  .btn-secondary{ background:transparent; color:var(--terracotta-deep); border:1.5px solid var(--terracotta); }
   input[type=text]{
     width:100%; padding:13px 14px; border-radius:10px; border:1.5px solid rgba(180,98,63,0.25);
     font-size:16px; font-family:'Inter',sans-serif; margin-top:6px; background:var(--sand); color:var(--ink);
@@ -42,12 +41,8 @@
   .hidden{ display:none !important; }
   .status-text{ font-size:13px; text-align:center; opacity:0.6; margin-top:14px; }
   .error{ color:var(--terracotta-deep); font-size:13px; margin-top:8px; text-align:center; }
-  .back{ background:none; border:none; color:var(--terracotta-deep); font-size:13px; font-weight:600; margin-bottom:14px; cursor:pointer; padding:0; }
 
-  /* ---- 3D game screen ---- */
-  #game-screen{
-    position:fixed; inset:0; background:#1a1a1a; z-index:5;
-  }
+  #game-screen{ position:fixed; inset:0; background:#1a1a1a; z-index:5; }
   #game-status{
     position:fixed; top:0; left:0; right:0; z-index:10;
     background:rgba(0,0,0,0.75); color:#7CFC98;
@@ -58,7 +53,17 @@
   #room-badge{
     position:fixed; top:36px; left:12px; z-index:10;
     background:rgba(0,0,0,0.5); color:#F2E9D8; font-family:'Fraunces',serif;
-    font-size:20px; letter-spacing:0.05em; padding:4px 10px; border-radius:8px;
+    font-size:18px; letter-spacing:0.05em; padding:4px 10px; border-radius:8px;
+  }
+  #minimap{
+    position:fixed; top:12px; right:12px; z-index:10;
+    border-radius:10px; border:1px solid rgba(255,255,255,0.25);
+    background:rgba(0,0,0,0.55);
+  }
+  .name-label{
+    color:#fff; font-family:'Inter',sans-serif; font-size:12px; font-weight:600;
+    text-shadow:0 0 4px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.9);
+    pointer-events:none; white-space:nowrap;
   }
   #controls{
     position:fixed; bottom:calc(20px + env(safe-area-inset-bottom)); left:0; right:0;
@@ -80,43 +85,28 @@
 <body>
 
   <h1>Family Quest</h1>
-  <p class="sub">Host or join a room, then walk around together in 3D.</p>
+  <p class="sub">Enter your family's code to walk into your shared world.</p>
 
   <div id="lobby">
     <div id="screen-start" class="card">
-      <button class="btn btn-primary" onclick="showHost()">Host a Room</button>
-      <button class="btn btn-secondary" onclick="showJoin()">Join a Room</button>
+      <div class="field">
+        <label>Family code</label>
+        <input type="text" id="family-code" placeholder="e.g. NASIKWALA" maxlength="16" style="text-transform:uppercase">
+      </div>
+      <div class="field">
+        <label>Your name</label>
+        <input type="text" id="player-name" placeholder="e.g. Husain" maxlength="20">
+      </div>
+      <button class="btn btn-primary" onclick="enterWorld()">Enter World</button>
       <p class="status-text" id="connection-status">Connecting…</p>
-    </div>
-
-    <div id="screen-host" class="card hidden">
-      <button class="back" onclick="goToStart()">&larr; back</button>
-      <div class="field">
-        <label>Your name</label>
-        <input type="text" id="host-name" placeholder="e.g. Husain" maxlength="20">
-      </div>
-      <button class="btn btn-primary" onclick="createRoom()">Create Room</button>
-      <p class="error hidden" id="host-error"></p>
-    </div>
-
-    <div id="screen-join" class="card hidden">
-      <button class="back" onclick="goToStart()">&larr; back</button>
-      <div class="field">
-        <label>Room code</label>
-        <input type="text" id="join-code" placeholder="e.g. FOX42" maxlength="6" style="text-transform:uppercase">
-      </div>
-      <div class="field">
-        <label>Your name</label>
-        <input type="text" id="join-name" placeholder="e.g. Lulua" maxlength="20">
-      </div>
-      <button class="btn btn-primary" onclick="joinRoom()">Join Room</button>
-      <p class="error hidden" id="join-error"></p>
+      <p class="error hidden" id="lobby-error"></p>
     </div>
   </div>
 
   <div id="game-screen" class="hidden">
     <div id="game-status">Starting…</div>
     <div id="room-badge"></div>
+    <canvas id="minimap" width="120" height="120"></canvas>
     <div id="controls">
       <button id="btn-left" class="ctrl-btn">◀</button>
       <button id="btn-forward" class="ctrl-btn">▲</button>
