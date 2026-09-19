@@ -200,7 +200,71 @@
   // via window.onStorylineUpdate(fn) — fn receives (dt, localPlayerPosition|null)
   const storylineUpdaters = [];
   window.onStorylineUpdate = (fn) => storylineUpdaters.push(fn);
+ // ---- reusable interaction helper ----
+  // window.createInteractable({x, z, radius, label, promptText, onInteract})
+  // gives you: a minimap dot, a proximity-triggered button, and a callback
+  // when it's pressed. onInteract returning 'once' makes the prompt disappear
+  // for good after use (for pickups, one-time switches, etc).
+  window.createInteractable = function({ x, z, radius = 2.2, label = '', promptText = 'Interact', onInteract }){
+    if(label) window.pointsOfInterest.push({ x, z, label });
 
+    const btn = document.createElement('button');
+    btn.textContent = promptText;
+    Object.assign(btn.style, {
+      position:'fixed', left:'50%', bottom:'110px', transform:'translateX(-50%)',
+      padding:'12px 22px', borderRadius:'14px', border:'none',
+      background:'rgba(47,209,232,0.9)', color:'#0b1a1e', fontWeight:'700',
+      fontSize:'15px', zIndex:'10', display:'none', cursor:'pointer'
+    });
+    document.body.appendChild(btn);
+
+    let done = false;
+    btn.addEventListener('click', () => {
+      if(done) return;
+      if(onInteract){ const result = onInteract(); if(result === 'once') done = true; }
+    });
+
+    window.onStorylineUpdate((dt, playerPos) => {
+      if(!playerPos || done){ btn.style.display = 'none'; return; }
+      const dx = playerPos.x - x, dz = playerPos.z - z;
+      btn.style.display = (Math.sqrt(dx*dx+dz*dz) < radius) ? 'block' : 'none';
+    });
+
+    return btn;
+  };
+
+  // ---- NPC helper ----
+  // window.spawnNPC({x, z, name}) places a stationary character with a name
+  // label, reusing the same model/animation system as players.
+  window.spawnNPC = function({ x, z, name = 'NPC' }){
+    const npc = spawnCharacter(name);
+    npc.model.position.set(x, 0, z);
+    return npc;
+  };
+
+  // ---- item helper ----
+  // window.spawnItem({x, z, label, color}) drops a glowing pickup marker.
+  // Walking up and pressing the prompt adds it to window.inventory (a plain
+  // array of label strings) and removes it from the world.
+  window.inventory = window.inventory || [];
+  window.spawnItem = function({ x, z, label = 'Item', color = 0xC9A05C }){
+    const mesh = new THREE.Mesh(
+      new THREE.IcosahedronGeometry(0.35, 0),
+      new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.6 })
+    );
+    mesh.position.set(x, 1, z);
+    scene.add(mesh);
+    window.onStorylineUpdate((dt) => { mesh.rotation.y += dt; });
+
+    window.createInteractable({
+      x, z, label, promptText: `Pick up ${label}`,
+      onInteract: () => {
+        window.inventory.push(label);
+        scene.remove(mesh);
+        return 'once';
+      }
+    });
+  };
   let baseGltf = null;
   const modelReady = new Promise((resolve) => {
     new GLTFLoader().load(
