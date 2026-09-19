@@ -196,6 +196,11 @@
   // future storyline files can: window.pointsOfInterest.push({x, z, label})
   window.pointsOfInterest = [];
 
+  // generic hook: any storyline file can register a per-frame callback
+  // via window.onStorylineUpdate(fn) — fn receives (dt, localPlayerPosition|null)
+  const storylineUpdaters = [];
+  window.onStorylineUpdate = (fn) => storylineUpdaters.push(fn);
+
   let baseGltf = null;
   const modelReady = new Promise((resolve) => {
     new GLTFLoader().load(
@@ -330,6 +335,8 @@
       ch.mixer.update(dt);
     });
 
+    storylineUpdaters.forEach(fn => fn(dt, localChar ? localChar.model.position : null));
+
     drawMinimap();
     renderer.render(scene, camera);
     labelRenderer.render(scene, camera);
@@ -403,6 +410,15 @@
     loadStoryline(startingStoryline);
   }
 
+  function getMyPersistentId(){
+    let id = localStorage.getItem('familyQuestPlayerId');
+    if(!id){
+      id = 'p' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem('familyQuestPlayerId', id);
+    }
+    return id;
+  }
+
   window.enterWorld = async function(){
     const code = document.getElementById('family-code').value.trim().toUpperCase();
     const name = document.getElementById('player-name').value.trim();
@@ -419,10 +435,11 @@
       } else {
         currentStoryline = roomSnap.data().currentStoryline || 1;
       }
-      const ref = await roomRef.collection('players').add({
+      const myId = getMyPersistentId();
+      await roomRef.collection('players').doc(myId).set({
         name, joinedAt: Date.now(), x:0, z:0, rotY:0, moving:false
-      });
-      enterGame(code, ref.id, name, currentStoryline);
+      }, { merge: true });
+      enterGame(code, myId, name, currentStoryline);
     }catch(err){
       errEl.textContent = "Couldn't connect (" + err.code + ")";
       errEl.classList.remove('hidden');
