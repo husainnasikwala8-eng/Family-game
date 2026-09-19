@@ -3,24 +3,19 @@ export async function init({ scene, THREE, pointsOfInterest, advanceStoryline })
   // 1. Import the GLTFLoader using the importmap already set up in your index file
   const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
   const loader = new GLTFLoader();
-
-  // 2. Load the downloaded space map model
-  // Change './space-station.glb' to whatever you named your downloaded file
+  
   loader.load(
-    './space-station.glb', 
+    './kenney_spaceKit.glb', // Updated to match your exact file name
     (gltf) => {
       const spaceMap = gltf.scene;
       
       // Scale and position the map. 
-      // If the map is too big or small, adjust the scale values below.
       spaceMap.scale.set(1, 1, 1);
-      
-      // We offset this map by 50 units on the X-axis so it doesn't overlap 
-      // with the procedural room generated in storyline-1.js
       spaceMap.position.set(50, 0, 0); 
       
       scene.add(spaceMap);
     },
+
     undefined,
     (error) => {
       console.error('Error loading the space map GLB:', error);
