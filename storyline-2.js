@@ -1,4 +1,4 @@
-// storyline-3.js
+// storyline-2.js
 export async function init({ scene, THREE, pointsOfInterest, advanceStoryline }) {
   const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
   const loader = new GLTFLoader();
