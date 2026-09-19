@@ -1,6 +1,7 @@
+// storyline-1.js
 export function init({ scene, THREE, spawnCharacter, pointsOfInterest, advanceStoryline }){
-  // ---- Spaceship interior (built from basic shapes — fully self-contained) ----
-  const roomSize = 28; // matches the base engine's play area
+  // ---- Spaceship interior ----
+  const roomSize = 28; 
   const metalMat = new THREE.MeshStandardMaterial({ color: 0x3a4048, metalness: 0.7, roughness: 0.4 });
   const wallMat  = new THREE.MeshStandardMaterial({ color: 0x21262c, metalness: 0.5, roughness: 0.6 });
   const glowMat  = new THREE.MeshStandardMaterial({ color: 0x2fd1e8, emissive: 0x2fd1e8, emissiveIntensity: 1.5 });
@@ -10,6 +11,7 @@ export function init({ scene, THREE, spawnCharacter, pointsOfInterest, advanceSt
   floor.rotation.x = -Math.PI/2;
   floor.position.y = 0.02;
   scene.add(floor);
+  
   const grid = new THREE.GridHelper(roomSize, 14, 0x2fd1e8, 0x1a1f24);
   grid.position.y = 0.03;
   scene.add(grid);
@@ -22,10 +24,12 @@ export function init({ scene, THREE, spawnCharacter, pointsOfInterest, advanceSt
     { pos:[-half,wallHeight/2,0], size:[0.4,wallHeight,roomSize] },
     { pos:[ half,wallHeight/2,0], size:[0.4,wallHeight,roomSize] },
   ];
+  
   wallDefs.forEach(w => {
     const wall = new THREE.Mesh(new THREE.BoxGeometry(...w.size), wallMat);
     wall.position.set(...w.pos);
     scene.add(wall);
+    
     const strip = new THREE.Mesh(new THREE.BoxGeometry(w.size[0]*0.9, 0.15, w.size[2]===roomSize ? roomSize*0.9 : 0.15), glowMat);
     strip.position.set(w.pos[0], 0.3, w.pos[2]);
     scene.add(strip);
@@ -36,21 +40,23 @@ export function init({ scene, THREE, spawnCharacter, pointsOfInterest, advanceSt
   const base = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1, 0.9), wallMat);
   base.position.set(consolePos.x, 0.5, consolePos.z);
   scene.add(base);
+  
   const screen = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.5, 0.08), glowMat);
   screen.position.set(consolePos.x, 1.1, consolePos.z - 0.4);
   screen.rotation.x = -0.3;
   scene.add(screen);
 
+  // This links directly to your index file's minimap logic
   pointsOfInterest.push({ x: consolePos.x, z: consolePos.z, label: 'Main Console' });
 
   // ---- interact prompt ----
   const prompt = document.createElement('button');
-  prompt.textContent = 'Interact';
+  prompt.textContent = 'Power up Console';
   Object.assign(prompt.style, {
     position:'fixed', left:'50%', bottom:'110px', transform:'translateX(-50%)',
     padding:'12px 22px', borderRadius:'14px', border:'none',
     background:'rgba(47,209,232,0.9)', color:'#0b1a1e', fontWeight:'700',
-    fontSize:'15px', zIndex:'10', display:'none'
+    fontSize:'15px', zIndex:'10', display:'none', cursor:'pointer'
   });
   document.body.appendChild(prompt);
 
@@ -59,13 +65,20 @@ export function init({ scene, THREE, spawnCharacter, pointsOfInterest, advanceSt
     if(done) return;
     done = true;
     prompt.textContent = 'Systems online ✓';
-    setTimeout(() => { prompt.style.display = 'none'; }, 1500);
-    advanceStoryline();
+    prompt.style.background = '#7CFC98'; 
+    
+    // Remove the button and advance the storyline in your Firebase database
+    setTimeout(() => { 
+      prompt.style.display = 'none'; 
+      advanceStoryline();
+    }, 1500);
   });
 
+  // Check distance to show/hide the button
   window.onStorylineUpdate((dt, playerPos) => {
     if(!playerPos || done) return;
-    const dx = playerPos.x - consolePos.x, dz = playerPos.z - consolePos.z;
+    const dx = playerPos.x - consolePos.x;
+    const dz = playerPos.z - consolePos.z;
     const inRange = Math.sqrt(dx*dx + dz*dz) < 2.2;
     prompt.style.display = inRange ? 'block' : 'none';
   });
