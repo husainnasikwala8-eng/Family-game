@@ -1,199 +1,188 @@
 // storyline-3.js
-export function init({ scene, THREE, pointsOfInterest, advanceStoryline }) {
+export async function init({ scene, THREE, pointsOfInterest, advanceStoryline }) {
   
   // 1. Erase the simulation's green ground to reveal the void
   scene.children.forEach(child => {
-    if (child.isMesh && child.geometry.type === 'PlaneGeometry' && child.material.color.getHex() === 0x5C7A5C) {
+    if (child.isMesh && child.geometry.type === 'PlaneGeometry') {
       child.visible = false;
     }
   });
 
   // 2. The Void Environment Setup
-  scene.background = new THREE.Color(0x050508);
-  scene.fog = new THREE.FogExp2(0x050508, 0.02);
+  scene.background = new THREE.Color(0x020205);
+  scene.fog = new THREE.FogExp2(0x020205, 0.015);
 
-  const levelGroup = new THREE.Group();
-  scene.add(levelGroup);
+  const spaceGroup = new THREE.Group();
+  scene.add(spaceGroup);
 
-  // --- HD MATERIALS ---
-  const obsidianMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0f, metalness: 0.9, roughness: 0.1 });
-  const gridMat = new THREE.MeshStandardMaterial({ color: 0x111115, metalness: 0.5, roughness: 0.8 });
-  const neonCyan = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 2.0 });
-  const neonMagenta = new THREE.MeshStandardMaterial({ color: 0xff0055, emissive: 0xff0055, emissiveIntensity: 2.0 });
-  const goldCore = new THREE.MeshStandardMaterial({ color: 0xffaa00, metalness: 1.0, roughness: 0.2, emissive: 0x884400, emissiveIntensity: 1.5 });
-
-  // 3. Sector 18: The Grand Platform
-  const platform = new THREE.Mesh(new THREE.CylinderGeometry(25, 28, 1, 32), obsidianMat);
-  platform.position.set(0, -0.5, 0);
-  levelGroup.add(platform);
-
-  const grid = new THREE.GridHelper(50, 25, 0x00ffff, 0x111111);
-  grid.position.y = 0.01;
-  levelGroup.add(grid);
-
-  // 4. Raigad-Class Monolithic Pillars
-  const pillarGeom = new THREE.BoxGeometry(2, 20, 2);
-  const ringGeom = new THREE.TorusGeometry(1.5, 0.1, 8, 24);
-  const numPillars = 8;
-  const radius = 18;
-
-  for (let i = 0; i < numPillars; i++) {
-    const angle = (i / numPillars) * Math.PI * 2;
-    const px = Math.cos(angle) * radius;
-    const pz = Math.sin(angle) * radius;
-
-    const pillar = new THREE.Mesh(pillarGeom, obsidianMat);
-    pillar.position.set(px, 10, pz);
-    pillar.lookAt(0, 10, 0);
-    levelGroup.add(pillar);
-
-    // Add glowing neon rings to each pillar
-    const ring = new THREE.Mesh(ringGeom, i % 2 === 0 ? neonCyan : neonMagenta);
-    ring.position.set(px, 2, pz);
-    ring.rotation.y = angle;
-    ring.rotation.x = Math.PI / 2;
-    levelGroup.add(ring);
+  // --- LAYER 1: THE STARFIELD ---
+  const starGeom = new THREE.BufferGeometry();
+  const starCount = 4000;
+  const starPos = new Float32Array(starCount * 3);
+  for(let i = 0; i < starCount * 3; i++) {
+    starPos[i] = (Math.random() - 0.5) * 300;
   }
+  starGeom.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+  const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.3, transparent: true, opacity: 0.8 });
+  const stars = new THREE.Points(starGeom, starMat);
+  spaceGroup.add(stars);
 
-  // 5. The HN Visuals Mainframe Core (Procedural Hologram)
-  const coreGroup = new THREE.Group();
-  coreGroup.position.set(0, 4, 0);
-  levelGroup.add(coreGroup);
+  // --- LAYER 2: MASSIVE RINGED PLANET ---
+  const planetGroup = new THREE.Group();
+  planetGroup.position.set(-60, -20, -100);
+  spaceGroup.add(planetGroup);
 
-  const coreMesh = new THREE.Mesh(new THREE.TorusKnotGeometry(1.5, 0.4, 128, 16), goldCore);
-  coreGroup.add(coreMesh);
+  const planetCore = new THREE.Mesh(
+    new THREE.SphereGeometry(25, 64, 64),
+    new THREE.MeshStandardMaterial({ color: 0x1a2b4c, roughness: 0.7, metalness: 0.2 })
+  );
+  planetGroup.add(planetCore);
 
-  const outerSphere = new THREE.Mesh(new THREE.IcosahedronGeometry(2.5, 1), neonCyan);
-  outerSphere.material.wireframe = true;
-  outerSphere.material.transparent = true;
-  outerSphere.material.opacity = 0.3;
-  coreGroup.add(outerSphere);
+  const atmosphere = new THREE.Mesh(
+    new THREE.SphereGeometry(26.5, 64, 64),
+    new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.15, side: THREE.BackSide })
+  );
+  planetGroup.add(atmosphere);
 
-  // 6. Floating Data Streams (InstancedMesh for Mobile 60FPS Performance)
-  const dataCount = 150;
-  const dataGeom = new THREE.BoxGeometry(0.1, 0.5, 0.1);
-  const dataInstanced = new THREE.InstancedMesh(dataGeom, neonCyan, dataCount);
+  const rings = new THREE.Mesh(
+    new THREE.TorusGeometry(40, 4, 2, 128),
+    new THREE.MeshStandardMaterial({ color: 0x885533, transparent: true, opacity: 0.7, roughness: 0.9 })
+  );
+  rings.rotation.x = Math.PI / 1.8;
+  planetGroup.add(rings);
+
+  // --- LAYER 3: MOVING ASTEROID FIELD ---
+  const meteorCount = 150;
+  const meteorGeom = new THREE.DodecahedronGeometry(1.2, 1);
+  const meteorMat = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.9, metalness: 0.1 });
+  const meteors = new THREE.InstancedMesh(meteorGeom, meteorMat, meteorCount);
+  
   const dummy = new THREE.Object3D();
-  const dataSpeeds = [];
-
-  for (let i = 0; i < dataCount; i++) {
-    const x = (Math.random() - 0.5) * 10;
-    const y = Math.random() * 15;
-    const z = (Math.random() - 0.5) * 10;
-    dummy.position.set(x, y, z);
-    dummy.updateMatrix();
-    dataInstanced.setMatrixAt(i, dummy.matrix);
-    dataSpeeds.push(0.02 + Math.random() * 0.05);
+  const meteorData = [];
+  for(let i = 0; i < meteorCount; i++) {
+    meteorData.push({
+      x: (Math.random() - 0.5) * 150,
+      y: (Math.random() - 0.5) * 40,
+      z: (Math.random() - 0.5) * 150,
+      rx: Math.random() * 0.05,
+      ry: Math.random() * 0.05,
+      speed: 0.2 + Math.random() * 0.5
+    });
   }
-  levelGroup.add(dataInstanced);
+  spaceGroup.add(meteors);
 
-  // 7. Dynamic Lighting Rig
-  const coreLight = new THREE.PointLight(0xffaa00, 5, 20);
-  coreLight.position.set(0, 4, 0);
-  levelGroup.add(coreLight);
+  // --- LAYER 4: PILOTING THE UPLOADED SHUTTLE ---
+  const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+  const loader = new GLTFLoader();
+  let shuttleMesh = null;
 
-  const cyanLight = new THREE.PointLight(0x00ffff, 3, 30);
-  cyanLight.position.set(10, 5, 10);
-  levelGroup.add(cyanLight);
+  loader.load(
+    './space_shuttle.glb', 
+    (gltf) => {
+      shuttleMesh = gltf.scene;
+      shuttleMesh.scale.set(1.5, 1.5, 1.5); 
+      scene.add(shuttleMesh);
+      
+      // Hide the default human characters so only the ship is visible
+      scene.traverse((child) => {
+        if (child.isSkinnedMesh) child.visible = false;
+        if (child.isCSS2DObject) child.visible = false; // Hides floating name tags
+      });
+    },
+    undefined,
+    (error) => console.error("Could not load space_shuttle.glb. Ensure spelling is exact.", error)
+  );
 
-  const magentaLight = new THREE.PointLight(0xff0055, 3, 30);
-  magentaLight.position.set(-10, 5, -10);
-  levelGroup.add(magentaLight);
-
-  // 8. The Objective Terminal
-  const terminalPos = { x: 0, z: 6 };
-  const terminalBase = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.2, 1), obsidianMat);
-  terminalBase.position.set(terminalPos.x, 0.6, terminalPos.z);
-  levelGroup.add(terminalBase);
-
-  const screen = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.6), neonMagenta);
-  screen.position.set(terminalPos.x, 1.4, terminalPos.z - 0.4);
-  screen.rotation.x = -0.4;
-  levelGroup.add(screen);
-
-  pointsOfInterest.push({ x: terminalPos.x, z: terminalPos.z, label: 'Master Server' });
-
-  // 9. Cyberpunk UI Interaction
+  // Cinematic Hyperjump Prompt
   const prompt = document.createElement('button');
-  prompt.textContent = 'INITIATE BURHANUDDIN PROTOCOL';
+  prompt.textContent = 'INITIATE WARP JUMP';
   Object.assign(prompt.style, {
     position:'fixed', left:'50%', bottom:'110px', transform:'translateX(-50%)',
-    padding:'16px 28px', borderRadius:'8px', border:'2px solid #00ffff',
-    background:'rgba(5, 5, 8, 0.9)', color:'#00ffff', fontWeight:'800',
-    fontSize:'14px', letterSpacing:'1px', zIndex:'10', display:'none', cursor:'pointer',
-    boxShadow: '0 0 15px rgba(0, 255, 255, 0.5)', textTransform: 'uppercase'
+    padding:'14px 24px', borderRadius:'10px', border:'none',
+    background:'#B4623F', color:'#FFFDF8', fontWeight:'700', 
+    fontSize:'16px', zIndex:'10', display:'none', cursor:'pointer',
+    boxShadow: '0 4px 12px rgba(180,98,63,0.5)'
   });
   document.body.appendChild(prompt);
 
-  let isDecrypted = false;
-  let time = 0;
+  const warpTarget = { x: 0, z: -30 };
+  pointsOfInterest.push({ x: warpTarget.x, z: warpTarget.z, label: 'Warp Gate' });
 
+  // Add a glowing warp gate to navigate towards
+  const gate = new THREE.Mesh(
+    new THREE.TorusGeometry(6, 0.5, 16, 64),
+    new THREE.MeshStandardMaterial({ color: 0x7CFC98, emissive: 0x7CFC98, emissiveIntensity: 2.0 })
+  );
+  gate.position.set(warpTarget.x, 2, warpTarget.z);
+  scene.add(gate);
+
+  let jumping = false;
   prompt.addEventListener('click', () => {
-    if(isDecrypted) return;
-    isDecrypted = true;
+    if(jumping) return;
+    jumping = true;
+    prompt.textContent = 'WARP ENGAGED';
+    prompt.style.background = '#7CFC98';
+    prompt.style.color = '#000';
     
-    // Cinematic hack sequence
-    prompt.style.background = '#ff0055';
-    prompt.style.color = '#fff';
-    prompt.style.borderColor = '#ff0055';
-    prompt.style.boxShadow = '0 0 25px rgba(255, 0, 85, 0.8)';
-    prompt.textContent = 'DECRYPTING HN-VISUALS MAINFRAME...';
-    
-    coreLight.color.setHex(0xff0055);
-    outerSphere.material.color.setHex(0xff0055);
-    
+    // Simulate jumping to lightspeed before advancing
     setTimeout(() => { 
-      prompt.textContent = 'ACCESS GRANTED';
-      setTimeout(() => {
-        prompt.style.display = 'none';
-        advanceStoryline();
-      }, 1500);
-    }, 2500);
+      prompt.style.display = 'none'; 
+      advanceStoryline();
+    }, 2000);
   });
 
-  // 10. The 60FPS Animation Loop
+  // --- THE 60-FPS CINEMATIC RENDER LOOP ---
+  let lastX = 0, lastZ = 0;
+
   window.onStorylineUpdate((dt, playerPos) => {
-    time += dt;
+    // 1. Rotate the planet
+    planetGroup.rotation.y += dt * 0.05;
 
-    // Spin and float the Mainframe Core
-    if (coreGroup) {
-      coreGroup.rotation.y += dt * 0.5;
-      coreGroup.rotation.x += dt * 0.2;
-      coreGroup.position.y = 4 + Math.sin(time * 2) * 0.5;
-    }
-
-    // Spin the outer wireframe cage in reverse
-    if (outerSphere) {
-      outerSphere.rotation.y -= dt * 0.8;
-      outerSphere.rotation.z += dt * 0.3;
+    // 2. Animate the Asteroid Field
+    for (let i = 0; i < meteorCount; i++) {
+      let data = meteorData[i];
+      data.z += data.speed; // Meteors fly past you continuously
       
-      // Expand rapidly during decryption
-      if (isDecrypted) {
-        outerSphere.scale.lerp(new THREE.Vector3(1.5, 1.5, 1.5), 0.05);
+      // Infinite looping: if meteor goes behind the camera, reset it far ahead
+      if (data.z > 80) data.z = -80;
+      
+      dummy.position.set(data.x, data.y, data.z);
+      dummy.rotation.x += data.rx;
+      dummy.rotation.y += data.ry;
+      dummy.updateMatrix();
+      meteors.setMatrixAt(i, dummy.matrix);
+    }
+    meteors.instanceMatrix.needsUpdate = true;
+
+    // 3. Sync the shuttle perfectly to the engine controls
+    if (playerPos && shuttleMesh) {
+      // Hover the ship slightly above the void
+      shuttleMesh.position.set(playerPos.x, playerPos.y + 1, playerPos.z);
+      
+      // Calculate movement direction to rotate the ship accurately
+      const dx = playerPos.x - lastX;
+      const dz = playerPos.z - lastZ;
+      
+      if (Math.abs(dx) > 0.01 || Math.abs(dz) > 0.01) {
+        // Smoothly point the nose of the ship in the direction of travel
+        const targetAngle = Math.atan2(dx, dz);
+        shuttleMesh.rotation.y = targetAngle;
+      }
+      
+      lastX = playerPos.x;
+      lastZ = playerPos.z;
+
+      // Warp Gate Proximity Trigger
+      if (!jumping) {
+        const dist = Math.sqrt(Math.pow(playerPos.x - warpTarget.x, 2) + Math.pow(playerPos.z - warpTarget.z, 2));
+        prompt.style.display = dist < 5.0 ? 'block' : 'none';
       }
     }
-
-    // Animate the floating data streams upwards
-    if (dataInstanced) {
-      for (let i = 0; i < dataCount; i++) {
-        dataInstanced.getMatrixAt(i, dummy.matrix);
-        dummy.matrix.decompose(dummy.position, dummy.quaternion, dummy.scale);
-        
-        dummy.position.y += dataSpeeds[i] * (isDecrypted ? 5 : 1); // Speed up if hacked
-        if (dummy.position.y > 15) dummy.position.y = 0;
-        
-        dummy.updateMatrix();
-        dataInstanced.setMatrixAt(i, dummy.matrix);
-      }
-      dataInstanced.instanceMatrix.needsUpdate = true;
+    
+    // Warp acceleration animation
+    if (jumping && shuttleMesh) {
+       shuttleMesh.position.z -= 2.5; // Blast the ship forward into the gate
     }
-
-    // Proximity check for the UI button
-    if(!playerPos || isDecrypted) return;
-    const dx = playerPos.x - terminalPos.x;
-    const dz = playerPos.z - terminalPos.z;
-    const inRange = Math.sqrt(dx*dx + dz*dz) < 3.5; 
-    prompt.style.display = inRange ? 'block' : 'none';
   });
 }
 
