@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Family Quest</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#B4623F">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+
+<style>
+  :root{
+    --sand:#F2E9D8; --card:#FFFDF8; --terracotta:#B4623F; --terracotta-deep:#8C4A30;
+    --sage:#5C7A5C; --ink:#2B2420;
+    font-family:'Inter',system-ui,sans-serif;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; background:var(--sand); color:var(--ink); }
+  body{ display:flex; flex-direction:column; align-items:center; padding:28px 18px 60px; overflow-x:hidden; }
+  h1{ font-family:'Fraunces',serif; font-weight:700; font-size:32px; margin:0 0 4px; }
+  .sub{ opacity:0.65; font-size:14px; margin:0 0 28px; text-align:center; }
+  .card{
+    background:var(--card); border:1px solid rgba(180,98,63,0.14);
+    border-radius:20px; padding:24px 20px; width:100%; max-width:380px;
+    box-shadow:0 2px 0 rgba(140,74,48,0.06);
+  }
+  .btn{
+    display:block; width:100%; padding:14px; border-radius:12px; border:none;
+    font-family:'Inter',sans-serif; font-weight:600; font-size:16px; cursor:pointer; margin-top:10px;
+  }
+  .btn-primary{ background:var(--terracotta); color:#fff; }
+  input[type=text]{
+    width:100%; padding:13px 14px; border-radius:10px; border:1.5px solid rgba(180,98,63,0.25);
+    font-size:16px; font-family:'Inter',sans-serif; margin-top:6px; background:var(--sand); color:var(--ink);
+  }
+  label{ font-size:13px; font-weight:600; opacity:0.75; }
+  .field{ margin-bottom:14px; }
+  .hidden{ display:none !important; }
+  .status-text{ font-size:13px; text-align:center; opacity:0.6; margin-top:14px; }
+  .error{ color:var(--terracotta-deep); font-size:13px; margin-top:8px; text-align:center; }
+
+  #game-screen{ position:fixed; inset:0; background:#1a1a1a; z-index:5; }
+  #game-status{
+    position:fixed; top:0; left:0; right:0; z-index:10;
+    background:rgba(0,0,0,0.75); color:#7CFC98;
+    font-family:monospace; font-size:12px; padding:8px 12px;
+    white-space:pre-wrap; word-break:break-word;
+  }
+  #game-status.error{ color:#FF6B6B; }
+  #room-badge{
+    position:fixed; top:36px; left:12px; z-index:10;
+    background:rgba(0,0,0,0.5); color:#F2E9D8; font-family:'Fraunces',serif;
+    font-size:18px; letter-spacing:0.05em; padding:4px 10px; border-radius:8px;
+  }
+  #minimap{
+    position:fixed; top:12px; right:12px; z-index:10;
+    border-radius:10px; border:1px solid rgba(255,255,255,0.25);
+    background:rgba(0,0,0,0.55);
+  }
+  .name-label{
+    color:#fff; font-family:'Inter',sans-serif; font-size:12px; font-weight:600;
+    text-shadow:0 0 4px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.9);
+    pointer-events:none; white-space:nowrap;
+  }
+  #controls{
+    position:fixed; bottom:calc(20px + env(safe-area-inset-bottom)); left:0; right:0;
+    display:grid; grid-template-columns:60px 60px 60px; grid-template-rows:60px 60px;
+    gap:10px; justify-content:center; z-index:10;
+  }
+  .ctrl-btn{
+    width:60px; height:60px; border-radius:14px; border:none;
+    background:rgba(255,255,255,0.18); color:#fff; font-size:24px;
+    -webkit-tap-highlight-color:transparent; touch-action:none; user-select:none;
+  }
+  .ctrl-btn:active{ background:rgba(255,255,255,0.35); }
+  #btn-left{ grid-column:1; grid-row:2; }
+  #btn-forward{ grid-column:2; grid-row:1; }
+  #btn-back{ grid-column:2; grid-row:2; }
+  #btn-right{ grid-column:3; grid-row:2; }
+</style>
+</head>
+<body>
+
+  <h1>Family Quest</h1>
+  <p class="sub">Enter your family's code to walk into your shared world.</p>
+
+  <div id="lobby">
+    <div id="screen-start" class="card">
+      <div class="field">
+        <label>Family code</label>
+        <input type="text" id="family-code" placeholder="e.g. NASIKWALA" maxlength="16" style="text-transform:uppercase">
+      </div>
+      <div class="field">
+        <label>Your name</label>
+        <input type="text" id="player-name" placeholder="e.g. Husain" maxlength="20">
+      </div>
+      <button class="btn btn-primary" onclick="enterWorld()">Enter World</button>
+      <p class="status-text" id="connection-status">Connecting…</p>
+      <p class="error hidden" id="lobby-error"></p>
+    </div>
+  </div>
+
+  <div id="game-screen" class="hidden">
+    <div id="game-status">Starting…</div>
+    <div id="room-badge"></div>
+    <canvas id="minimap" width="120" height="120"></canvas>
+    <div id="controls">
+      <button id="btn-left" class="ctrl-btn">◀</button>
+      <button id="btn-forward" class="ctrl-btn">▲</button>
+      <button id="btn-back" class="ctrl-btn">▼</button>
+      <button id="btn-right" class="ctrl-btn">▶</button>
+    </div>
+  </div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+  // ================= Firebase =================
+  const firebaseConfig = {
+    apiKey: "AIzaSyBAvhilaqL4R9aTg_1yIJJGTLUablzA-38",
+    authDomain: "family-game-4646b.firebaseapp.com",
+    projectId: "family-game-4646b",
+    storageBucket: "family-game-4646b.firebasestorage.app",
+    messagingSenderId: "404759157112",
+    appId: "1:404759157112:web:66d4d49d728849ca92d08d"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  db.collection("_ping").doc("test").set({ t: Date.now() })
+    .then(() => { document.getElementById('connection-status').textContent = "Connected ✓"; })
+    .catch((err) => { document.getElementById('connection-status').textContent = "Connection failed (" + err.code + ")"; });
+
+  // ================= Three.js core =================
+  const THREE = await import('three');
+  const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+  const SkeletonUtils = await import('three/addons/utils/SkeletonUtils.js');
+  const { CSS2DRenderer, CSS2DObject } = await import('three/addons/renderers/CSS2DRenderer.js');
+
+  const gameStatusEl = document.getElementById('game-status');
+  function setGameStatus(msg, isError){
+    gameStatusEl.textContent = msg;
+    gameStatusEl.classList.toggle('error', !!isError);
+  }
+  window.addEventListener('error', (e) => setGameStatus('Script error: ' + e.message, true));
+  window.addEventListener('unhandledrejection', (e) => setGameStatus('Error: ' + (e.reason && e.reason.message ? e.reason.message : e.reason), true));
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x2b2420);
+  const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 100);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  const labelRenderer = new CSS2DRenderer();
+  labelRenderer.setSize(window.innerWidth, window.innerHeight);
+  labelRenderer.domElement.style.position = 'absolute';
+  labelRenderer.domElement.style.top = '0px';
+  labelRenderer.domElement.style.left = '0px';
+  labelRenderer.domElement.style.zIndex = '6';
+  labelRenderer.domElement.style.pointerEvents = 'none';
+
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 2));
+  const dirLight = new THREE.DirectionalLight(0xffffff, 2);
+  dirLight.position.set(3,5,3);
+  scene.add(dirLight);
+
+  const mapLimit = 14;
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(mapLimit*2, mapLimit*2),
+    new THREE.MeshStandardMaterial({ color: 0x5C7A5C })
+  );
+  ground.rotation.x = -Math.PI/2;
+  scene.add(ground);
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    labelRenderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // points of interest — empty until a storyline file adds some.
+  // future storyline files can: window.pointsOfInterest.push({x, z, label})
+  window.pointsOfInterest = [];
+
+  // generic hook: any storyline file can register a per-frame callback
+  // via window.onStorylineUpdate(fn) — fn receives (dt, localPlayerPosition|null)
+  const storylineUpdaters = [];
+  window.onStorylineUpdate = (fn) => storylineUpdaters.push(fn);
+ // ---- reusable interaction helper ----
+  // window.createInteractable({x, z, radius, label, promptText, onInteract})
+  // gives you: a minimap dot, a proximity-triggered button, and a callback
+  // when it's pressed. onInteract returning 'once' makes the prompt disappear
+  // for good after use (for pickups, one-time switches, etc).
+  window.createInteractable = function({ x, z, radius = 2.2, label = '', promptText = 'Interact', onInteract }){
+    if(label) window.pointsOfInterest.push({ x, z, label });
+
+    const btn = document.createElement('button');
+    btn.textContent = promptText;
+    Object.assign(btn.style, {
+      position:'fixed', left:'50%', bottom:'110px', transform:'translateX(-50%)',
+      padding:'12px 22px', borderRadius:'14px', border:'none',
+      background:'rgba(47,209,232,0.9)', color:'#0b1a1e', fontWeight:'700',
+      fontSize:'15px', zIndex:'10', display:'none', cursor:'pointer'
+    });
+    document.body.appendChild(btn);
+
+    let done = false;
+    btn.addEventListener('click', () => {
+      if(done) return;
+      if(onInteract){ const result = onInteract(); if(result === 'once') done = true; }
+    });
+
+    window.onStorylineUpdate((dt, playerPos) => {
+      if(!playerPos || done){ btn.style.display = 'none'; return; }
+      const dx = playerPos.x - x, dz = playerPos.z - z;
+      btn.style.display = (Math.sqrt(dx*dx+dz*dz) < radius) ? 'block' : 'none';
+    });
+
+    return btn;
+  };
+
+  // ---- NPC helper ----
+  // window.spawnNPC({x, z, name}) places a stationary character with a name
+  // label, reusing the same model/animation system as players.
+  window.spawnNPC = function({ x, z, name = 'NPC' }){
+    const npc = spawnCharacter(name);
+    npc.model.position.set(x, 0, z);
+    return npc;
+  };
+
+  // ---- item helper ----
+  // window.spawnItem({x, z, label, color}) drops a glowing pickup marker.
+  // Walking up and pressing the prompt adds it to window.inventory (a plain
+  // array of label strings) and removes it from the world.
+  window.inventory = window.inventory || [];
+  window.spawnItem = function({ x, z, label = 'Item', color = 0xC9A05C }){
+    const mesh = new THREE.Mesh(
+      new THREE.IcosahedronGeometry(0.35, 0),
+      new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.6 })
+    );
+    mesh.position.set(x, 1, z);
+    scene.add(mesh);
+    window.onStorylineUpdate((dt) => { mesh.rotation.y += dt; });
+
+    window.createInteractable({
+      x, z, label, promptText: `Pick up ${label}`,
+      onInteract: () => {
+        window.inventory.push(label);
+        scene.remove(mesh);
+        return 'once';
+      }
+    });
+  };
+  let baseGltf = null;
+  const MODEL_URL = 'https://threejs.org/examples/models/gltf/Soldier.glb';
+  // NOTE: this is the stock Three.js demo model, loaded from threejs.org's own
+  // servers — it's a reliability risk (that fetch has no guarantee of staying
+  // fast or even up) and it's also why everyone in the game looks like the
+  // same generic soldier. Self-hosting your own model (same repo as everything
+  // else) fixes the reliability half; swapping in a real avatar fixes the rest.
+  function loadBaseModelOnce(){
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('timed out after 15s')), 15000);
+      new GLTFLoader().load(
+        MODEL_URL,
+        (gltf) => { clearTimeout(timer); resolve(gltf); },
+        undefined,
+        (err) => { clearTimeout(timer); reject(err); }
+      );
+    });
+  }
+  async function ensureModelReady(){
+    const attempts = 3;
+    for (let i = 1; i <= attempts; i++){
+      try {
+        setGameStatus(i === 1 ? 'Loading world…' : `Loading world… (retry ${i}/${attempts})`);
+        baseGltf = await loadBaseModelOnce();
+        return;
+      } catch (e) {
+        if (i === attempts) {
+          setGameStatus('Could not load the character model — check your connection and reload.', true);
+          throw e;
+        }
+        await new Promise(r => setTimeout(r, 1200));
+      }
+    }
+  }
+  const modelReady = ensureModelReady();
+
+  function findClip(name){
+    return baseGltf.animations.find(a => new RegExp(name,'i').test(a.name)) || baseGltf.animations[0];
+  }
+
+  function spawnCharacter(name){
+    const model = SkeletonUtils.clone(baseGltf.scene);
+    scene.add(model);
+    const mixer = new THREE.AnimationMixer(model);
+    const idleAction = mixer.clipAction(findClip('idle'));
+    const walkAction = mixer.clipAction(findClip('walk'));
+    idleAction.play();
+
+    const div = document.createElement('div');
+    div.className = 'name-label';
+    div.textContent = name;
+    const label = new CSS2DObject(div);
+    label.position.set(0, 2.2, 0);
+    model.add(label);
+
+    return { model, mixer, idleAction, walkAction, currentAction: idleAction, moving:false };
+  }
+    const turnSpeed = 2.2, moveSpeed = 2.5;
+  const camDistance = 5, camHeight = 3.0;
+
+  let localChar = null;
+  let myDocRef = null;
+  const remoteChars = new Map(); // docId -> character object with targetX/targetZ/targetRot
+
+  const input = { forward:false, back:false, left:false, right:false };
+  function bindBtn(id, key){
+    const el = document.getElementById(id);
+    const on = (e) => { e.preventDefault(); input[key] = true; };
+    const off = (e) => { e.preventDefault(); input[key] = false; };
+    el.addEventListener('pointerdown', on);
+    el.addEventListener('pointerup', off);
+    el.addEventListener('pointercancel', off);
+    el.addEventListener('pointerleave', off);
+  }
+  bindBtn('btn-forward','forward'); bindBtn('btn-back','back');
+  bindBtn('btn-left','left');       bindBtn('btn-right','right');
+  function releaseAll(){ input.forward=input.back=input.left=input.right=false; }
+  window.addEventListener('pointerup', releaseAll);
+  window.addEventListener('pointercancel', releaseAll);
+
+  function updateActionState(ch, moving, reverse){
+      ((z + mapLimit) / (mapLimit*2)) * minimapCanvas.height
+    ];
+  }
+  function drawMinimap(){
+    mctx.clearRect(0,0,minimapCanvas.width,minimapCanvas.height);
+    window.pointsOfInterest.forEach(p => {
+      const [mx,my] = worldToMap(p.x, p.z);
+      mctx.fillStyle = '#C9A05C';
+      mctx.beginPath(); mctx.arc(mx,my,3,0,Math.PI*2); mctx.fill();
+    });
+    remoteChars.forEach(ch => {
+      const [mx,my] = worldToMap(ch.model.position.x, ch.model.position.z);
+      mctx.fillStyle = '#E4483A';
+      mctx.beginPath(); mctx.arc(mx,my,3,0,Math.PI*2); mctx.fill();
+    });
+    if(localChar){
+      const [mx,my] = worldToMap(localChar.model.position.x, localChar.model.position.z);
+      mctx.fillStyle = '#ffffff';
+      mctx.beginPath(); mctx.arc(mx,my,4,0,Math.PI*2); mctx.fill();
+    }
+  }
+
+  let lastSent = 0;
+  const clock = new THREE.Clock();
+
+  function animate(){
+    requestAnimationFrame(animate);
+    const dt = Math.min(clock.getDelta(), 0.05);
+
+    if(localChar){
+      const m = localChar.model;
+      if(input.left)  m.rotation.y += turnSpeed*dt;
+      if(input.right) m.rotation.y -= turnSpeed*dt;
+      if(input.forward){ m.position.x -= Math.sin(m.rotation.y)*moveSpeed*dt; m.position.z -= Math.cos(m.rotation.y)*moveSpeed*dt; }
+      if(input.back){ m.position.x += Math.sin(m.rotation.y)*moveSpeed*dt*0.6; m.position.z += Math.cos(m.rotation.y)*moveSpeed*dt*0.6; }
+      m.position.x = THREE.MathUtils.clamp(m.position.x, -mapLimit, mapLimit);
+      m.position.z = THREE.MathUtils.clamp(m.position.z, -mapLimit, mapLimit);
+
+      const moving = input.forward || input.back;
+    // away, independent of whether their old document ever gets deleted.
+    const staleCutoff = Date.now() - 20000;
+    remoteChars.forEach((ch, id) => {
+      if(ch.lastSeen && ch.lastSeen < staleCutoff){
+        scene.remove(ch.model);
+        remoteChars.delete(id);
+      }
+    });
+
+    storylineUpdaters.forEach(fn => fn(dt, localChar ? localChar.model.position : null));
+
+    drawMinimap();
+    renderer.render(scene, camera);
+    labelRenderer.render(scene, camera);
+  }
+  animate();
+  // ================= Storyline auto-loader =================
+  // Looks for ./storyline-1.js, ./storyline-2.js, etc. — nothing to
+  // configure by name. If the file doesn't exist yet, this quietly
+  // does nothing until you create it in a future session.
+  let roomRef = null;
+
+  async function loadStoryline(n){
+    const url = `./storyline-${n}.js`;
+
+    // Check existence with a plain HEAD request first, so a real bug inside
+    // an existing storyline file is never confused with "doesn't exist yet"
+    // — the old version caught both the same way, which is almost certainly
+    // why broken levels were showing up as silently empty instead of as
+    // visible errors.
+    let exists = true;
+    try {
+      const res = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+      exists = res.ok;
+    } catch (e) {
+      exists = false;
+    }
+    if (!exists) return; // no storyline file for this number yet — expected
+
+    try {
+      const mod = await import(url);
+      if (mod.init) {
+        mod.init({ scene, THREE, spawnCharacter, pointsOfInterest: window.pointsOfInterest, advanceStoryline: window.advanceStoryline });
+      } else {
+        setGameStatus(`storyline-${n}.js loaded but has no init() export`, true);
+      }
+    } catch (e) {
+      setGameStatus(`storyline-${n}.js has an error: ${e.message}`, true);
+      console.error(`storyline-${n}.js error:`, e);
+    }
+  }
+
+  window.advanceStoryline = async function(){
+    if(!roomRef) return;
+    const snap = await roomRef.get();
+    const next = (snap.data().currentStoryline || 1) + 1;
+    await roomRef.update({ currentStoryline: next });
+    loadStoryline(next);
+  };
+
+  // ================= Entering the world =================
+  async function enterGame(code, myId, name, startingStoryline){
+    document.getElementById('lobby').classList.add('hidden');
+    document.getElementById('game-screen').classList.remove('hidden');
+    document.getElementById('room-badge').textContent = code;
+    document.getElementById('game-screen').prepend(labelRenderer.domElement);
+    document.getElementById('game-screen').prepend(renderer.domElement);
+
+    try {
+      await modelReady;
+    } catch (e) {
+      return; // ensureModelReady() already put a clear message on screen
+    }
+    setGameStatus('Ready — use the buttons to move');
+
+          ch.targetX = data.x||0; ch.targetZ = data.z||0; ch.targetRot = data.rotY||0; ch.moving = !!data.moving;
+          ch.lastSeen = data.lastSeen || Date.now();
+          ch.model.position.set(ch.targetX, 0, ch.targetZ);
+          remoteChars.set(id, ch);
+        } else {
+          const ch = remoteChars.get(id);
+          ch.targetX = data.x ?? ch.targetX;
+          ch.targetZ = data.z ?? ch.targetZ;
+          ch.targetRot = data.rotY ?? ch.targetRot;
+          ch.moving = !!data.moving;
+          ch.lastSeen = data.lastSeen || Date.now();
+        }
+      });
+    });
+
+    loadStoryline(startingStoryline);
+  }
+
+  function getMyPersistentId(){
+    let id = localStorage.getItem('familyQuestPlayerId');
+    if(!id){
+      id = 'p' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem('familyQuestPlayerId', id);
+    }
+    return id;
+  }
+
+  window.enterWorld = async function(){
+    const code = document.getElementById('family-code').value.trim().toUpperCase();
+    const name = document.getElementById('player-name').value.trim();
+    const errEl = document.getElementById('lobby-error');
+    if(!code || !name){ errEl.textContent = "Enter both a family code and your name."; errEl.classList.remove('hidden'); return; }
+    errEl.classList.add('hidden');
+
+    try{
+      roomRef = db.collection('rooms').doc(code);
+      const roomSnap = await roomRef.get();
+      let currentStoryline = 1;
+      if(!roomSnap.exists){
+        await roomRef.set({ createdAt: Date.now(), currentStoryline: 1 });
+      } else {
+        currentStoryline = roomSnap.data().currentStoryline || 1;
+      }
+      const myId = getMyPersistentId();
+      await roomRef.collection('players').doc(myId).set({
+        name, joinedAt: Date.now(), x:0, z:0, rotY:0, moving:false
+      }, { merge: true });
+      enterGame(code, myId, name, currentStoryline);
+    }catch(err){
+      errEl.textContent = "Couldn't connect (" + err.code + ")";
+      errEl.classList.remove('hidden');
+    }
+  };
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
+}
+</script>
+</body>
+</html>
